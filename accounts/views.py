@@ -74,6 +74,19 @@ def logout_view(request):
     messages.success(request, 'You have been logged out successfully.')
     return redirect('login')
 
+@login_required
+def dashboard_view(request):
+    """
+    Display user dashboard with account details
+    """
+    user = request.user
+    context = {
+        'user': user,
+        'profile': user.profile,
+        'title': 'Dashboard - FixIT'
+    }
+    return render(request, 'accounts/dashboard.html', context)
+
 
 @login_required
 def profile_update_view(request):
@@ -99,3 +112,4 @@ def profile_update_view(request):
         'title': 'Update Profile - FixIT'
     }
     return render(request, 'accounts/profile_update.html', context)
+
