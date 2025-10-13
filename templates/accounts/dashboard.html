@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Welcome Card -->
+    <div class="col-md-12 mb-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <h3 class="card-title">
+                    <i class="fas fa-hand-wave"></i> Welcome, {{ user.get_full_name|default:user.username }}!
+                </h3>
+                <p class="card-text text-muted">
+                    You're logged in to your FixIT account. Here you can manage your profile and access our services.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Details Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-user-circle"></i> Account Details</h4>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-user"></i> Username:</td>
+                            <td>{{ user.username }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-envelope"></i> Email:</td>
+                            <td>{{ user.email }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-id-card"></i> First Name:</td>
+                            <td>{{ user.first_name|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-id-card"></i> Last Name:</td>
+                            <td>{{ user.last_name|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-calendar-alt"></i> Joined:</td>
+                            <td>{{ user.date_joined|date:"F d, Y" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Details Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="fas fa-address-card"></i> Profile Details</h4>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-phone"></i> Phone:</td>
+                            <td>{{ profile.phone_number|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-map-marker-alt"></i> Address:</td>
+                            <td>{{ profile.address|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-city"></i> City:</td>
+                            <td>{{ profile.city|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-flag"></i> Country:</td>
+                            <td>{{ profile.country|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold"><i class="fas fa-birthday-cake"></i> Date of Birth:</td>
+                            <td>{{ profile.date_of_birth|date:"F d, Y"|default:"Not provided" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h4>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a href="{% url 'profile_update' %}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-user-edit"></i> Update Profile
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="#" class="btn btn-outline-success w-100">
+                            <i class="fas fa-tools"></i> Request Service
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="#" class="btn btn-outline-info w-100">
+                            <i class="fas fa-history"></i> View History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
