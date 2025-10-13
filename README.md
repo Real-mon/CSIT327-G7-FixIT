@@ -21,7 +21,12 @@ A **Django-based web application** that connects users with technicians to fix c
 - **Framework:** Bootstrap 5  
 
 ---
+## Team Members
+💻 Sigrid Laputan - Frontend (UI & Tailwind Integration)​
+⚙️ Andrae Lapis ​ – Backend & Supabase configuration
+🧩 Justin Monreal ​– Dashboard & integration logic​
 
+---
 ## ⚙️ Installation
 
 ### 🧾 Prerequisites
@@ -71,3 +76,11 @@ python manage.py runserver
 
 # 9. Open your browser and go to
 # http://127.0.0.1:8000
+
+
+
+
+
+
+
+
