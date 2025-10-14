@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import UserProfile
 
-
 class UserSignUpForm(UserCreationForm):
     """
     Extended sign-up form with additional fields
@@ -30,6 +29,13 @@ class UserSignUpForm(UserCreationForm):
             'class': 'form-control',
             'placeholder': 'Last Name'
         })
+    )
+    
+    # Add user_type field to handle technician registration
+    user_type = forms.ChoiceField(
+        choices=[('user', 'User'), ('technician', 'Technician')],
+        widget=forms.HiddenInput(),
+        required=False
     )
     
     class Meta:
@@ -61,16 +67,22 @@ class UserSignUpForm(UserCreationForm):
         return email
     
     def save(self, commit=True):
-        """Save user with email"""
+        """Save user with email and set technician status"""
         user = super(UserSignUpForm, self).save(commit=False)
         user.email = self.cleaned_data['email']
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
+        
         if commit:
             user.save()
+            # Set technician status based on user_type
+            user_type = self.cleaned_data.get('user_type', 'user')
+            user.profile.is_technician = (user_type == 'technician')
+            user.profile.save()
+        
         return user
 
-
+# ... rest of your forms remain the same
 class UserLoginForm(AuthenticationForm):
     """
     Custom login form with styled widgets
@@ -87,7 +99,6 @@ class UserLoginForm(AuthenticationForm):
             'placeholder': 'Password'
         })
     )
-
 
 class UserUpdateForm(forms.ModelForm):
     """
@@ -107,7 +118,6 @@ class UserUpdateForm(forms.ModelForm):
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
         }
-
 
 class ProfileUpdateForm(forms.ModelForm):
     """

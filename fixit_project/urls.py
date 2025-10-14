@@ -17,8 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
+from django.views.generic import RedirectView
+from accounts.views import role_select_view
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/', include('accounts.urls')),
-    path('', lambda request: redirect('login')), # Redirect root to login
+    path('accounts/', include('accounts.urls')),  # Keep accounts/ prefix
+     path('', role_select_view, name='home')
+    
+    #path('', lambda request: redirect('login')), # Redirect root to login
 ]
