@@ -1,100 +1,262 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Register - FixIT{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h3 class="mb-0"><i class="fas fa-user-plus"></i> Sign Up</h3>
+<!-- Animated Background -->
+<div class="absolute inset-0 overflow-hidden">
+    <div class="absolute -inset-10 opacity-20">
+        <div class="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+        <div class="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-r from-[#bdf1f6] to-[#8fbaf3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
+    </div>
+</div>
+
+<div class="relative min-h-screen flex items-center justify-center px-4 py-8">
+    <!-- Back Button -->
+    <a href="{% url 'home' %}" class="absolute top-6 left-6 z-10 flex items-center text-[#0245a3] hover:text-[#8fbaf3] transition-colors group bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg">
+        <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
+        Back to Home
+    </a>
+
+    <div class="w-full max-w-6xl">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <!-- Left Column - Welcome & Features -->
+            <div class="text-[#8fbaf3] space-y-8">
+                <!-- Header -->
+                <div class="space-y-4">
+                    <h1 class="text-5xl font-bold">Join FixIT Today</h1>
+                    <p class="text-xl text-[#8fbaf3]">Create your account and get instant access to our comprehensive support platform with expert assistance.</p>
+                </div>
+
+                <!-- Features -->
+                <div class="space-y-6">
+                    <!-- Free Account -->
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                            <i class="fas fa-user-plus text-[#8fbaf3] text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold mb-2">Free Account</h3>
+                            <p class="text-[#8fbaf3] text-lg">Get started with our comprehensive free tier</p>
+                        </div>
+                    </div>
+
+                    <!-- Instant Support -->
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                            <i class="fas fa-bolt text-[#8fbaf3] text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold mb-2">Instant Support</h3>
+                            <p class="text-[#8fbaf3] text-lg">Access help desk immediately after signup</p>
+                        </div>
+                    </div>
+
+                    <!-- Trusted Platform -->
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                            <i class="fas fa-shield-alt text-[#8fbaf3] text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold mb-2">Trusted Platform</h3>
+                            <p class="text-[#8fbaf3] text-lg">Join thousands of satisfied customers</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="pt-6 border-t border-white/20">
+                    <p class="text-lg text-[#8fbaf3]">Join 5,000+ users who trust FixIT for their support needs</p>
+                </div>
             </div>
-            <div class="card-body">
-                <p class="text-muted">Create your FixIT account to get started</p>
-                
-                <form method="post" novalidate>
+
+            <!-- Right Column - Registration Form -->
+            <div class="bg-white/20 backdrop-blur-lg rounded-3xl border border-[#8fbaf3]/40 shadow-2xl overflow-hidden">
+                <!-- Form Header -->
+                <div class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] p-8 text-center">
+                    <h2 class="text-3xl font-bold text-white">REGISTER</h2>
+                    <p class="text-white/80 mt-2" id="role-subtitle">
+                        {% if request.GET.user_type == 'technician' %}
+                        Register as Technician
+                        {% else %}
+                        Register as User
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Form -->
+                <form method="POST" class="p-8 space-y-6">
                     {% csrf_token %}
+
+                    <!-- DEBUG: Show ALL form errors -->
+                    {% if form.errors %}
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        <h4 class="font-bold">Form Errors:</h4>
+                        <ul>
+                        {% for field, errors in form.errors.items %}
+                            <li><strong>{{ field }}:</strong> 
+                                {% for error in errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
                     
-                    <div class="mb-3">
-                        <label for="{{ form.username.id_for_label }}" class="form-label">
-                            <i class="fas fa-user"></i> Username
+                    <!-- Hidden user_type field with default value -->
+                    <input type="hidden" name="user_type" value="{{ request.GET.user_type|default:'user' }}">
+
+                    <!-- Username -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-[#0245a3]">
+                            <i class="fas fa-user mr-2 text-[#8fbaf3]"></i>
+                            Username
                         </label>
-                        {{ form.username }}
+                        <input type="text" name="username" required
+                               class="w-full bg-white/60 border border-[#8fbaf3]/40 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/60 focus:outline-none focus:ring-2 focus:ring-[#8fbaf3] focus:border-transparent transition-all duration-300"
+                               placeholder="Enter your username"
+                               value="{{ form.username.value|default:'' }}">
                         {% if form.username.errors %}
-                            <div class="text-danger">{{ form.username.errors }}</div>
+                        <div class="text-red-500 text-sm mt-1">{{ form.username.errors }}</div>
                         {% endif %}
                     </div>
 
-                    <div class="mb-3">
-                        <label for="{{ form.email.id_for_label }}" class="form-label">
-                            <i class="fas fa-envelope"></i> Email Address
+                    <!-- Email Address -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-[#0245a3]">
+                            <i class="fas fa-envelope mr-2 text-[#8fbaf3]"></i>
+                            Email Address
                         </label>
-                        {{ form.email }}
+                        <input type="email" name="email" required
+                               class="w-full bg-white/60 border border-[#8fbaf3]/40 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/60 focus:outline-none focus:ring-2 focus:ring-[#8fbaf3] focus:border-transparent transition-all duration-300"
+                               placeholder="Enter your email address"
+                               value="{{ form.email.value|default:'' }}">
                         {% if form.email.errors %}
-                            <div class="text-danger">{{ form.email.errors }}</div>
+                        <div class="text-red-500 text-sm mt-1">{{ form.email.errors }}</div>
                         {% endif %}
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.first_name.id_for_label }}" class="form-label">
-                                <i class="fas fa-id-card"></i> First Name
-                            </label>
-                            {{ form.first_name }}
-                            {% if form.first_name.errors %}
-                                <div class="text-danger">{{ form.first_name.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label for="{{ form.last_name.id_for_label }}" class="form-label">
-                                <i class="fas fa-id-card"></i> Last Name
-                            </label>
-                            {{ form.last_name }}
-                            {% if form.last_name.errors %}
-                                <div class="text-danger">{{ form.last_name.errors }}</div>
-                            {% endif %}
-                        </div>
+                    <!-- ADD FIRST NAME FIELD -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-[#0245a3]">
+                            <i class="fas fa-user-circle mr-2 text-[#8fbaf3]"></i>
+                            First Name
+                        </label>
+                        <input type="text" name="first_name" required
+                            class="w-full bg-white/60 border border-[#8fbaf3]/40 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/60 focus:outline-none focus:ring-2 focus:ring-[#8fbaf3] focus:border-transparent transition-all duration-300"
+                            placeholder="Enter your first name"
+                            value="{{ form.first_name.value|default:'' }}">
+                        {% if form.first_name.errors %}
+                        <div class="text-red-500 text-sm mt-1">{{ form.first_name.errors }}</div>
+                        {% endif %}
                     </div>
 
-                    <div class="mb-3">
-                        <label for="{{ form.password1.id_for_label }}" class="form-label">
-                            <i class="fas fa-lock"></i> Password
+                    <!-- ADD LAST NAME FIELD -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-[#0245a3]">
+                            <i class="fas fa-user-circle mr-2 text-[#8fbaf3]"></i>
+                            Last Name
                         </label>
-                        {{ form.password1 }}
+                        <input type="text" name="last_name" required
+                            class="w-full bg-white/60 border border-[#8fbaf3]/40 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/60 focus:outline-none focus:ring-2 focus:ring-[#8fbaf3] focus:border-transparent transition-all duration-300"
+                            placeholder="Enter your last name"
+                            value="{{ form.last_name.value|default:'' }}">
+                        {% if form.last_name.errors %}
+                        <div class="text-red-500 text-sm mt-1">{{ form.last_name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-[#0245a3]">
+                            <i class="fas fa-lock mr-2 text-[#8fbaf3]"></i>
+                            Password
+                        </label>
+                        <input type="password" name="password1" required
+                               class="w-full bg-white/60 border border-[#8fbaf3]/40 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/60 focus:outline-none focus:ring-2 focus:ring-[#8fbaf3] focus:border-transparent transition-all duration-300"
+                               placeholder="Enter your password">
                         {% if form.password1.errors %}
-                            <div class="text-danger">{{ form.password1.errors }}</div>
+                        <div class="text-red-500 text-sm mt-1">{{ form.password1.errors }}</div>
                         {% endif %}
-                        <small class="form-text text-muted">
-                            Password must be at least 8 characters long.
-                        </small>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="{{ form.password2.id_for_label }}" class="form-label">
-                            <i class="fas fa-lock"></i> Confirm Password
+                    <!-- Confirm Password -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-[#0245a3]">
+                            <i class="fas fa-lock mr-2 text-[#8fbaf3]"></i>
+                            Confirm Password
                         </label>
-                        {{ form.password2 }}
+                        <input type="password" name="password2" required
+                               class="w-full bg-white/60 border border-[#8fbaf3]/40 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/60 focus:outline-none focus:ring-2 focus:ring-[#8fbaf3] focus:border-transparent transition-all duration-300"
+                               placeholder="Confirm your password">
                         {% if form.password2.errors %}
-                            <div class="text-danger">{{ form.password2.errors }}</div>
+                        <div class="text-red-500 text-sm mt-1">{{ form.password2.errors }}</div>
                         {% endif %}
                     </div>
 
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-user-plus"></i> Sign Up
-                        </button>
+                    <!-- Display form errors -->
+                    {% if form.non_field_errors %}
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Terms Agreement -->
+                    <label class="flex items-start space-x-3 cursor-pointer">
+                        <div class="relative mt-1">
+                            <input type="checkbox" name="terms" required class="sr-only">
+                            <div class="w-4 h-4 bg-white/80 border border-[#8fbaf3] rounded-sm flex items-center justify-center">
+                                <i class="fas fa-check text-[#0245a3] text-xs opacity-0"></i>
+                            </div>
+                        </div>
+                        <span class="text-sm text-[#0245a3]">
+                            I agree to the <a href="#" class="text-[#0245a3] hover:text-[#8fbaf3] font-semibold underline">Terms of Service</a> and <a href="#" class="text-[#0245a3] hover:text-[#8fbaf3] font-semibold underline">Privacy Policy</a>
+                        </span>
+                    </label>
+
+                    <!-- Submit Button -->
+                    <button type="submit" 
+                            class="w-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white py-4 rounded-xl font-semibold hover:from-[#0245a3] hover:to-[#8fbaf3] transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+                        Create Account as 
+                        <span id="submit-button-text">
+                            {% if request.GET.user_type == 'technician' %}
+                            Technician
+                            {% else %}
+                            User
+                            {% endif %}
+                        </span>
+                    </button>
+
+                    <!-- Login Link -->
+                    <div class="text-center pt-4">
+                        <p class="text-[#0245a3]">
+                            Already have an account?
+                            <a href="{% url 'login' %}" class="text-[#0245a3] hover:text-[#8fbaf3] font-semibold transition-colors underline">
+                                Sign In
+                            </a>
+                        </p>
                     </div>
                 </form>
-
-                <hr class="my-4">
-                
-                <p class="text-center mb-0">
-                    Already have an account? 
-                    <a href="{% url 'login' %}" class="text-decoration-none">Login here</a>
-                </p>
             </div>
         </div>
     </div>
 </div>
+
+{% block extra_scripts %}
+<style>
+/* Custom checkbox styling */
+input[type="checkbox"]:checked + div {
+    background-color: #8fbaf3;
+    border-color: #0245a3;
+}
+
+input[type="checkbox"]:checked + div i {
+    opacity: 1;
+}
+</style>
+{% endblock %}
+
 {% endblock %}
