@@ -3,6 +3,9 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import UserSignUpForm, UserLoginForm, UserUpdateForm, ProfileUpdateForm
+from django.shortcuts import render, redirect
+from django.contrib.auth.models import User
+from django.shortcuts import render
 
 
 def role_select_view(request):
@@ -173,26 +176,47 @@ def user_dashboard_view(request):
     }
     return render(request, 'dashboard/user_dashboard.html', context)
 
-
+#@login_required
 def password_reset_view(request):
-    """
-    Handle password reset - placeholder for future implementation
-    """
+    if request.method == "POST":
+        email = request.POST.get("email")
+        try:
+            user = User.objects.get(email=email)
+            return redirect('change_password')  # Your Change password UI
+        except User.DoesNotExist:
+            return render(request, "accounts/password_reset.html", {"message": "❌ No account found with that email."})
+    
     context = {
         'title': 'Password Reset - FixIT',
         'hide_navigation': True
     }
     return render(request, 'accounts/password_reset.html', context)
 
+
+
+#@login_required
 def change_password_view(request):
-    """
-    Handle password change - placeholder for future implementation
-    """
-    context = {
-        'title': 'Change Password - FixIT',
-        'hide_navigation': True
-    }
-    return render(request, 'accounts/change_password.html', context)
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        # Validate passwords match
+        if new_password != confirm_password:
+            messages.error(request, "Passwords do not match!")
+            return render(request, 'accounts/change_password.html')
+
+        # Update the logged-in user's password
+        user = request.user
+        user.set_password(new_password)
+        user.save()
+
+        # Re-authenticate user after password change
+        update_session_auth_hash(request, user)  # Important: keeps user logged in
+        messages.success(request, "Your password has been changed successfully!")
+        return redirect('login')  # Redirect to dashboard instead of login
+
+    # GET request - show the form
+    return render(request, 'accounts/change_password.html')
 
 
 # Helper function to redirect users to correct dashboard
