@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to FixIT{% endblock %}
+
+{% block content %}
+<!-- Animated Background -->
+<div class="absolute inset-0 overflow-hidden"> 
+    <div class="absolute -inset-10 opacity-100"> 
+        <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div> 
+        <div class="absolute top-1/3 right-1/4 w-72 h-72 bg-gradient-to-r from-[#bdf1f6] to-[#8fbaf3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div> 
+        <div class="absolute bottom-1/4 left-1/3 w-72 h-72 bg-gradient-to-r from-[#0245a3] to-[#bdf1f6] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-4000"></div> 
+    </div> 
+</div>
+
+<div class="relative min-h-screen flex items-center justify-center px-4 py-12">
+    <div class="max-w-6xl w-full space-y-12">
+        <!-- Header -->
+        <div class="text-center space-y-4">
+            <h1 class="text-4xl font-bold text-[#0245a3] mb-2">
+                Welcome to FixIT
+            </h1>
+            <p class="text-lg text-[#0245a3] max-w-2xl mx-auto">
+                Your trusted support portal for all technical assistance needs
+            </p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Left Column - Features -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Feature Card 1 -->
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl p-6 shadow-lg border border-white/20">
+                    <div class="flex items-start mb-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4">
+                            <i class="fas fa-headset text-[#0245a3] text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-[#0245a3]">Expert Support</h3>
+                            <p class="text-[#0245a3] mt-1">24/7 Technical assistance from certified professionals</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Feature Card 2 -->
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl p-6 shadow-lg border border-white/20">
+                    <div class="flex items-start mb-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4">
+                            <i class="fas fa-bolt text-[#0245a3] text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-[#0245a3]">Fast Resolution</h3>
+                            <p class="text-[#0245a3] mt-1">Quick problem solving with average response under 2 hours</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Feature Card 3 -->
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl p-6 shadow-lg border border-white/20">
+                    <div class="flex items-start mb-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4">
+                            <i class="fas fa-shield-alt text-[#0245a3] text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-[#0245a3]">Secure Platform</h3>
+                            <p class="text-[#0245a3] mt-1">Protected & encrypted communications for your safety</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column - Registration Options -->
+            <div class="lg:col-span-2">
+                <div class="bg-white/20 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-white/20">
+                    <h2 class="text-2xl font-bold text-center text-[#0245a3] mb-8">Choose Your Role</h2>
+                    <p class="text-[#0245a3] text-center mb-8">Select how you'd like to use FixIT</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6 mb-8">
+                        <!-- User Registration Card -->
+                        <div id="user-registration-card"
+                             class="group registration-card cursor-pointer"
+                             data-user-type="user"
+                             onclick="selectUserType('user')">
+                            <div class="bg-white/20 backdrop-blur-lg rounded-2xl p-6 h-full border-2 border-white/30 shadow-lg hover:shadow-2xl transition-all duration-300 hover:bg-white/30 hover:border-white/50">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                                        <i class="fas fa-user text-[#0245a3] text-2xl"></i>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-[#0245a3] mb-2">I Need Help</h3>
+                                    <p class="text-[#0245a3] mb-4">
+                                        Get support for your technical issues and access our help desk services
+                                    </p>
+                                    <div class="flex items-center justify-center space-x-2 text-[#0245a3] text-sm">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Create support tickets</span>
+                                    </div>
+                                    <div class="flex items-center justify-center space-x-2 text-[#0245a3] text-sm mt-1">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Get expert assistance</span>
+                                    </div>
+                                    <div class="flex items-center justify-center space-x-2 text-[#0245a3] text-sm mt-1">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Track service requests</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Technician Registration Card -->
+                        <div id="technician-registration-card"
+                             class="group registration-card cursor-pointer"
+                             data-user-type="technician"
+                             onclick="selectUserType('technician')">
+                            <div class="bg-white/20 backdrop-blur-lg rounded-2xl p-6 h-full border-2 border-white/30 shadow-lg hover:shadow-2xl transition-all duration-300 hover:bg-white/30 hover:border-white/50">
+                                <div class="flex flex-col items-center text-center">
+                                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                                        <i class="fas fa-user-cog text-[#0245a3] text-2xl"></i>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-[#0245a3] mb-2">I Provide Help</h3>
+                                    <p class="text-[#0245a3] mb-4">
+                                        Provide technical support services and help users solve their problems
+                                    </p>
+                                    <div class="flex items-center justify-center space-x-2 text-[#0245a3] text-sm">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Offer your services</span>
+                                    </div>
+                                    <div class="flex items-center justify-center space-x-2 text-[#0245a3] text-sm mt-1">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Earn money</span>
+                                    </div>
+                                    <div class="flex items-center justify-center space-x-2 text-[#0245a3] text-sm mt-1">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Build your reputation</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Selection Indicator -->
+                    <div id="selection-message" class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl p-4 mb-6 text-center hidden">
+                        <p class="text-[#0245a3] font-semibold">
+                            <i class="fas fa-user mr-2"></i>
+                            You've selected: <span id="selected-role" class="text-[#bdf1f6]">User</span>
+                        </p>
+                        <p class="text-[#0245a3] text-sm mt-1">Click "Continue to Registration" to proceed</p>
+                    </div>
+                    
+                    <!-- Register Button -->
+                    <div class="text-center mb-6">
+                        <a href="{% url 'signup' %}?user_type=user" 
+                           id="register-button"
+                           class="inline-block w-full py-4 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-bold text-lg rounded-xl hover:from-[#0245a3] hover:to-[#8fbaf3] transition-all duration-300 transform hover:scale-105 shadow-lg">
+                            Continue to Registration as <span id="register-role-text">User</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Login Link -->
+                    <div class="text-center">
+                        <p class="text-white/80">
+                            Already have an account? 
+                            <a href="{% url 'login' %}" class="text-white font-semibold hover:underline">Sign In</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_scripts %}
+<script>
+// Store the selected user type
+let selectedUserType = 'user';
+
+function selectUserType(userType) {
+    selectedUserType = userType;
+    
+    // Update registration cards visual selection
+    document.querySelectorAll('.registration-card').forEach(card => {
+        const cardDiv = card.querySelector('div');
+        cardDiv.classList.remove('bg-gradient-to-r', 'from-[#8fbaf3]', 'to-[#0245a3]', 'border-white', 'scale-105');
+        cardDiv.classList.add('bg-white/20', 'border-white/30');
+        
+        // Reset icon colors
+        const icon = card.querySelector('.w-16');
+        icon.classList.remove('bg-white');
+        icon.classList.add('bg-white/20');
+    });
+    
+    // Highlight selected card
+    const selectedCard = document.getElementById(`${userType}-registration-card`);
+    const selectedCardDiv = selectedCard.querySelector('div');
+    selectedCardDiv.classList.remove('bg-white/20', 'border-white/30');
+    selectedCardDiv.classList.add('bg-gradient-to-r', 'from-[#8fbaf3]', 'to-[#bdf1f6]', 'border-white', 'scale-105');
+    
+    // Highlight selected card icon
+    const selectedIcon = selectedCard.querySelector('.w-16');
+    selectedIcon.classList.remove('bg-white/20');
+    selectedIcon.classList.add('bg-white');
+    
+    // Update register button URL and text
+    const registerButton = document.getElementById('register-button');
+    registerButton.href = `{% url 'signup' %}?user_type=${userType}`;
+    
+    const registerRoleText = document.getElementById('register-role-text');
+    registerRoleText.textContent = userType === 'user' ? 'User' : 'Technician';
+    
+    // Update selection message
+    const selectedRole = document.getElementById('selected-role');
+    selectedRole.textContent = userType === 'user' ? 'User' : 'Technician';
+    
+    // Show selection message
+    const selectionMessage = document.getElementById('selection-message');
+    selectionMessage.classList.remove('hidden');
+    
+    // Update selection message icon
+    const messageIcon = selectionMessage.querySelector('i');
+    messageIcon.className = userType === 'user' ? 'fas fa-user mr-2' : 'fas fa-user-cog mr-2';
+}
+
+// Initialize with user selected by default
+document.addEventListener('DOMContentLoaded', function() {
+    selectUserType('user');
+    
+    // Add keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft') {
+            selectUserType('user');
+        } else if (e.key === 'ArrowRight') {
+            selectUserType('technician');
+        } else if (e.key === 'Enter' && document.activeElement.classList.contains('registration-card')) {
+            const userType = document.activeElement.dataset.userType;
+            window.location.href = `{% url 'signup' %}?user_type=${userType}`;
+        }
+    });
+    
+    // Add focus management for accessibility
+    document.querySelectorAll('.registration-card').forEach(card => {
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', `Register as ${card.dataset.userType}`);
+    });
+});
+</script>
+
+<style>
+.registration-card {
+    transition: all 0.3s ease;
+}
+
+.registration-card:focus {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+.registration-card div {
+    transition: all 0.3s ease;
+}
+
+/* Enhanced hover effects */
+.registration-card:hover div {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Selection animation */
+.registration-card.selected div {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(143, 186, 243, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(143, 186, 243, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(143, 186, 243, 0);
+    }
+}
+
+/* Scale effect for selected card */
+.scale-105 {
+    transform: scale(1.05);
+}
+</style>
+{% endblock %}
+
+{% endblock %}
