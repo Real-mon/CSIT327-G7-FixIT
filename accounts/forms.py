@@ -101,51 +101,70 @@ class UserLoginForm(AuthenticationForm):
     )
 
 class UserUpdateForm(forms.ModelForm):
-    """
-    Form to update user information
-    """
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={
-            'class': 'form-control'
-        })
-    )
-    
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name']
+        fields = ['first_name', 'last_name', 'username', 'email']
         widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'placeholder': 'Enter your first name'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'placeholder': 'Enter your last name'
+            }),
+            'username': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'placeholder': 'Enter your username'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'placeholder': 'Enter your email address'
+            }),
         }
 
 class ProfileUpdateForm(forms.ModelForm):
-    """
-    Form to update user profile information
-    """
     class Meta:
         model = UserProfile
-        fields = ['phone_number', 'address', 'city', 'country', 'date_of_birth']
+        fields = ['phone_number', 'date_of_birth', 'address', 'city', 'country']
         widgets = {
             'phone_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Phone Number'
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'placeholder': 'Enter your phone number'
+            }),
+            'date_of_birth': forms.DateInput(attrs={
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'type': 'date'
             }),
             'address': forms.Textarea(attrs={
-                'class': 'form-control',
-                'placeholder': 'Address',
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'placeholder': 'Enter your address',
                 'rows': 3
             }),
             'city': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'City'
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'placeholder': 'Enter your city'
             }),
             'country': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Country'
-            }),
-            'date_of_birth': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300',
+                'placeholder': 'Enter your country'
             }),
         }
+
+class ProfilePictureForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['profile_picture']
+        widgets = {
+            'profile_picture': forms.FileInput(attrs={
+                'class': 'hidden',
+                'accept': 'image/*',
+                'id': 'profile_picture'
+            })
+        }
+    
+    def clean_profile_picture(self):
+        # Since it's a CharField now, we handle the file validation differently
+        picture = self.cleaned_data.get('profile_picture')
+        # You might want to remove this validation or handle it differently
+        return picture
