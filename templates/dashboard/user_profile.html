@@ -55,8 +55,28 @@
         <div class="flex-1 p-8">
             <!-- Profile Header -->
             <div class="mb-8">
-                <h1 class="text-3xl font-bold text-[#0245a3] mb-2">My Profile</h1>
-                <p class="text-[#0245a3]">Manage your account information and preferences</p>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-3xl font-bold text-[#0245a3] mb-2">My Profile</h1>
+                        <p class="text-[#0245a3]">Manage your account information and preferences</p>
+                    </div>
+                    <a href="{% url 'profile_update' %}" class="bg-[#0245a3] text-white font-semibold rounded-xl px-6 py-3 hover:bg-[#0245a3]/90 transition inline-flex items-center">
+                        <i class="fas fa-edit mr-2"></i>
+                        Edit Profile
+                    </a>
+                </div>
+                
+                <!-- Success Messages -->
+                {% if messages %}
+                <div class="mt-4 space-y-2">
+                    {% for message in messages %}
+                        <div class="p-4 rounded-xl {% if message.tags == 'success' %}bg-green-100 text-green-800 border border-green-300{% else %}bg-red-100 text-red-800 border border-red-300{% endif %}">
+                            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} mr-2"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -68,39 +88,16 @@
                         <div class="flex flex-col items-center justify-center">
                             <!-- Profile Picture Container -->
                             <div class="relative mb-6">
-                                <!-- Main Profile Picture Area -->
-                                <div id="profilePictureContainer" class="w-40 h-40 rounded-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] flex items-center justify-center overflow-hidden border-4 border-[#8fbaf3] shadow-lg">
+                                <div class="w-40 h-40 rounded-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] flex items-center justify-center overflow-hidden border-4 border-[#8fbaf3] shadow-lg">
                                     {% if user.profile.profile_picture %}
                                         <img src="{{ user.profile.profile_picture.url }}" 
                                              alt="Profile Picture" 
-                                             class="w-full h-full object-cover"
-                                             id="profileImage">
+                                             class="w-full h-full object-cover">
                                     {% else %}
-                                        <i class="fas fa-user text-white text-5xl" id="profileIcon"></i>
+                                        <i class="fas fa-user text-white text-5xl"></i>
                                     {% endif %}
                                 </div>
-                                
-                                <!-- Upload Overlay -->
-                                <div class="absolute inset-0 rounded-full bg-black/50 opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer"
-                                     onclick="document.getElementById('profile_picture').click()">
-                                    <i class="fas fa-camera text-white text-2xl"></i>
-                                </div>
                             </div>
-                            
-                            <form method="post" enctype="multipart/form-data" class="w-full" id="profilePictureForm">
-                                {% csrf_token %}
-                                <div class="mb-4 text-center">
-                                    <input type="file" name="profile_picture" id="profile_picture" class="hidden" accept="image/*">
-                                    <label for="profile_picture" class="cursor-pointer bg-[#0245a3] text-white font-semibold rounded-xl px-4 py-3 hover:bg-[#0245a3]/90 transition inline-flex items-center justify-center w-full mb-3">
-                                        <i class="fas fa-upload mr-2"></i>
-                                        Upload New Photo
-                                    </label>
-                                </div>
-                                <button type="submit" name="update_picture" class="bg-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl px-4 py-3 hover:bg-[#8fbaf3]/90 transition w-full">
-                                    <i class="fas fa-sync-alt mr-2"></i>
-                                    Update Picture
-                                </button>
-                            </form>
                         </div>
                     </div>
 
@@ -134,69 +131,69 @@
                     <!-- Basic Information -->
                     <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
                         <h2 class="text-xl font-bold text-[#0245a3] mb-6">Basic Information</h2>
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="space-y-2">
-                                    <label for="id_first_name" class="block text-[#0245a3] font-medium">First Name</label>
-                                    {{ user_form.first_name }}
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="id_last_name" class="block text-[#0245a3] font-medium">Last Name</label>
-                                    {{ user_form.last_name }}
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="id_username" class="block text-[#0245a3] font-medium">Username</label>
-                                    {{ user_form.username }}
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="id_email" class="block text-[#0245a3] font-medium">Email</label>
-                                    {{ user_form.email }}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="block text-[#0245a3] font-medium">First Name</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30">
+                                    {{ user.first_name|default:"Not set" }}
                                 </div>
                             </div>
-                            <div class="mt-6">
-                                <button type="submit" name="update_user" class="bg-[#0245a3] text-white font-semibold rounded-xl px-8 py-3 hover:bg-[#0245a3]/90 transition inline-flex items-center">
-                                    <i class="fas fa-save mr-2"></i>
-                                    Update Basic Information
-                                </button>
+                            <div class="space-y-2">
+                                <label class="block text-[#0245a3] font-medium">Last Name</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30">
+                                    {{ user.last_name|default:"Not set" }}
+                                </div>
                             </div>
-                        </form>
+                            <div class="space-y-2">
+                                <label class="block text-[#0245a3] font-medium">Username</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30">
+                                    {{ user.username }}
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-[#0245a3] font-medium">Email</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30">
+                                    {{ user.email }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Additional Information -->
                     <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
                         <h2 class="text-xl font-bold text-[#0245a3] mb-6">Additional Information</h2>
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="space-y-2">
-                                    <label for="id_phone_number" class="block text-[#0245a3] font-medium">Phone Number</label>
-                                    {{ profile_form.phone_number }}
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="id_date_of_birth" class="block text-[#0245a3] font-medium">Date of Birth</label>
-                                    {{ profile_form.date_of_birth }}
-                                </div>
-                                <div class="md:col-span-2 space-y-2">
-                                    <label for="id_address" class="block text-[#0245a3] font-medium">Address</label>
-                                    {{ profile_form.address }}
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="id_city" class="block text-[#0245a3] font-medium">City</label>
-                                    {{ profile_form.city }}
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="id_country" class="block text-[#0245a3] font-medium">Country</label>
-                                    {{ profile_form.country }}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="block text-[#0245a3] font-medium">Phone Number</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30">
+                                    {{ user.profile.phone_number|default:"Not set" }}
                                 </div>
                             </div>
-                            <div class="mt-6">
-                                <button type="submit" name="update_profile" class="bg-[#0245a3] text-white font-semibold rounded-xl px-8 py-3 hover:bg-[#0245a3]/90 transition inline-flex items-center">
-                                    <i class="fas fa-save mr-2"></i>
-                                    Update Profile Information
-                                </button>
+                            <div class="space-y-2">
+                                <label class="block text-[#0245a3] font-medium">Date of Birth</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30">
+                                    {{ user.profile.date_of_birth|default:"Not set" }}
+                                </div>
                             </div>
-                        </form>
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="block text-[#0245a3] font-medium">Address</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30 min-h-[80px]">
+                                    {{ user.profile.address|default:"Not set"|linebreaks }}
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-[#0245a3] font-medium">City</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30">
+                                    {{ user.profile.city|default:"Not set" }}
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-[#0245a3] font-medium">Country</label>
+                                <div class="bg-white/25 rounded-xl p-3 text-[#0245a3] border border-[#8fbaf3]/30">
+                                    {{ user.profile.country|default:"Not set" }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -206,137 +203,5 @@
 
 <style>
     .animation-delay-2000 { animation-delay: 2s; }
-    
-    /* Improved Form Styling */
-    input, textarea, select {
-        background: rgba(255, 255, 255, 0.25);
-        border: 2px solid rgba(143, 186, 243, 0.3);
-        border-radius: 0.75rem;
-        padding: 0.75rem 1rem;
-        width: 100%;
-        color: #0245a3;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-    }
-    
-    input:focus, textarea:focus, select:focus {
-        outline: none;
-        border-color: #0245a3;
-        background: rgba(255, 255, 255, 0.35);
-        box-shadow: 0 0 0 3px rgba(2, 69, 163, 0.15);
-        transform: translateY(-1px);
-    }
-    
-    input::placeholder, textarea::placeholder {
-        color: rgba(2, 69, 163, 0.5);
-    }
-    
-    /* Profile picture hover effects */
-    .relative .absolute {
-        transition: opacity 0.3s ease;
-    }
-    
-    /* Button hover effects */
-    button {
-        transition: all 0.3s ease;
-    }
-    
-    button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(2, 69, 163, 0.2);
-    }
 </style>
-
-<script>
-    // Enhanced profile picture preview with better element targeting
-    document.addEventListener('DOMContentLoaded', function() {
-        const profilePictureInput = document.getElementById('profile_picture');
-        const profilePictureContainer = document.getElementById('profilePictureContainer');
-        const profileImage = document.getElementById('profileImage');
-        const profileIcon = document.getElementById('profileIcon');
-        
-        if (profilePictureInput) {
-            profilePictureInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        // Check if there's already an image
-                        if (profileImage) {
-                            // Update existing image
-                            profileImage.src = e.target.result;
-                        } else if (profileIcon) {
-                            // Replace icon with image
-                            profileIcon.remove();
-                            const newImg = document.createElement('img');
-                            newImg.src = e.target.result;
-                            newImg.alt = 'Profile Picture';
-                            newImg.className = 'w-full h-full object-cover';
-                            newImg.id = 'profileImage';
-                            profilePictureContainer.appendChild(newImg);
-                        } else {
-                            // Create new image if neither exists
-                            const newImg = document.createElement('img');
-                            newImg.src = e.target.result;
-                            newImg.alt = 'Profile Picture';
-                            newImg.className = 'w-full h-full object-cover';
-                            newImg.id = 'profileImage';
-                            profilePictureContainer.appendChild(newImg);
-                        }
-                        
-                        // Auto-submit the form after image selection
-                        setTimeout(() => {
-                            document.getElementById('profilePictureForm').submit();
-                        }, 500);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-
-        // Click overlay to trigger file input
-        document.querySelectorAll('.absolute.inset-0').forEach(overlay => {
-            overlay.addEventListener('click', function() {
-                document.getElementById('profile_picture').click();
-            });
-        });
-
-        // Show file name when selected
-        document.getElementById('profile_picture')?.addEventListener('change', function(e) {
-            const fileName = e.target.files[0]?.name;
-            if (fileName) {
-                console.log('Selected file:', fileName);
-            }
-        });
-
-        // Add loading states to forms
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', function() {
-                const buttons = this.querySelectorAll('button[type="submit"]');
-                buttons.forEach(button => {
-                    const originalText = button.innerHTML;
-                    button.disabled = true;
-                    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Updating...';
-                    
-                    // Revert after 5 seconds if still disabled (form submission failed)
-                    setTimeout(() => {
-                        if (button.disabled) {
-                            button.disabled = false;
-                            button.innerHTML = originalText;
-                        }
-                    }, 5000);
-                });
-            });
-        });
-    });
-
-    // Debug function to check element states
-    function debugProfilePicture() {
-        console.log('Profile Picture Container:', document.getElementById('profilePictureContainer'));
-        console.log('Profile Image:', document.getElementById('profileImage'));
-        console.log('Profile Icon:', document.getElementById('profileIcon'));
-        console.log('File Input:', document.getElementById('profile_picture'));
-    }
-</script>
 {% endblock %}
