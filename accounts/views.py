@@ -2,7 +2,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .forms import UserSignUpForm, UserLoginForm, UserUpdateForm, ProfileUpdateForm
+from .forms import UserSignUpForm, UserLoginForm, UserUpdateForm, ProfileUpdateForm, ProfilePictureForm
+from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.shortcuts import render
@@ -110,34 +111,110 @@ def dashboard_view(request):
     """
     return redirect_to_correct_dashboard(request.user)
 
-
+###
 @login_required
 def profile_update_view(request):
     """
-    Handle profile update
+    Handle profile updates including profile picture and user details
     """
+    # Initialize forms
+    user_form = UserUpdateForm(instance=request.user)
+    profile_form = ProfileUpdateForm(instance=request.user.profile)
+    picture_form = ProfilePictureForm(instance=request.user.profile)
+
     if request.method == 'POST':
-        u_form = UserUpdateForm(request.POST, instance=request.user)
-        p_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+        print("=== FORM SUBMISSION START ===")
+        print("POST data:", dict(request.POST))
+        print("All POST keys:", list(request.POST.keys()))
+        print("FILES data:", dict(request.FILES))
         
-        if u_form.is_valid() and p_form.is_valid():
-            u_form.save()
-            p_form.save()
-            messages.success(request, 'Your profile has been updated successfully!')
-            return redirect('dashboard')
+        # Determine which form was submitted based on field presence
+        
+        # Check if this is the User form (has user-related fields)
+        if any(field in request.POST for field in ['first_name', 'last_name', 'username', 'email']):
+            print("🔄 Detected User Form Submission")
+            user_form = UserUpdateForm(request.POST, instance=request.user)
+            if user_form.is_valid():
+                user = user_form.save()
+                print(f"✅ Saved user: {user.first_name} {user.last_name}")
+                messages.success(request, 'Your basic information has been updated successfully!')
+                return redirect('profile_update')
+            else:
+                print("❌ User form errors:", user_form.errors)
+                messages.error(request, 'Please correct the errors in basic information.')
+        
+        # Check if this is the Profile form (has profile-related fields)
+        elif any(field in request.POST for field in ['phone_number', 'address', 'city', 'country', 'date_of_birth']):
+            print("🔄 Detected Profile Form Submission")
+            profile_form = ProfileUpdateForm(request.POST, instance=request.user.profile)
+            if profile_form.is_valid():
+                profile = profile_form.save()
+                print(f"✅ Saved profile - Phone: {profile.phone_number}, Address: {profile.address}")
+                messages.success(request, 'Your profile information has been updated successfully!')
+                return redirect('profile_update')
+            else:
+                print("❌ Profile form errors:", profile_form.errors)
+                messages.error(request, 'Please correct the errors in profile information.')
+        
+        # Check if this is the Picture form (has files OR the update_picture button)
+        elif 'profile_picture' in request.FILES or 'update_picture' in request.POST:
+            print("🔄 Detected Picture Form Submission")
+            
+            if 'profile_picture' in request.FILES:
+                uploaded_file = request.FILES['profile_picture']
+                print(f"📁 File received: {uploaded_file.name}, Size: {uploaded_file.size}")
+                
+                # Validate file size
+                if uploaded_file.size > 5 * 1024 * 1024:
+                    messages.error(request, 'Image file too large ( > 5MB )')
+                    return redirect('profile_update')
+                
+                # Validate file type
+                valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
+                file_extension = os.path.splitext(uploaded_file.name)[1].lower()
+                if not any(file_extension.endswith(ext) for ext in valid_extensions):
+                    messages.error(request, 'Please upload a valid image file (JPG, PNG, GIF, BMP)')
+                    return redirect('profile_update')
+                
+                # Handle file upload
+                try:
+                    from django.core.files.storage import FileSystemStorage
+                    import uuid
+                    import os
+                    
+                    fs = FileSystemStorage()
+                    file_extension = os.path.splitext(uploaded_file.name)[1]
+                    unique_filename = f"profile_pics/{uuid.uuid4()}{file_extension}"
+                    filename = fs.save(unique_filename, uploaded_file)
+                    
+                    # Update the profile with the file path
+                    request.user.profile.profile_picture = filename
+                    request.user.profile.save()
+                    
+                    print(f"✅ Saved profile picture: {filename}")
+                    messages.success(request, 'Your profile picture has been updated successfully!')
+                    
+                except Exception as e:
+                    print("❌ Error saving profile picture:", e)
+                    messages.error(request, 'Error updating profile picture. Please try again.')
+            else:
+                print("❌ No file selected for upload")
+                messages.error(request, 'Please select a file to upload.')
+            
+            return redirect('profile_update')
         else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        u_form = UserUpdateForm(instance=request.user)
-        p_form = ProfileUpdateForm(instance=request.user.profile)
+            print("❓ Could not determine which form was submitted")
+            messages.error(request, 'Form submission error. Please try again.')
+        
+        print("=== FORM SUBMISSION END ===")
 
     context = {
-        'u_form': u_form,
-        'p_form': p_form,
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'picture_form': picture_form,
         'title': 'Update Profile - FixIT'
     }
     return render(request, 'accounts/profile_update.html', context)
-
 
 @login_required
 def technician_dashboard_view(request):
