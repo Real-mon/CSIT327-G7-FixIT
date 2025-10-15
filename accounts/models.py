@@ -9,12 +9,12 @@ class UserProfile(models.Model):
     OneToOne relationship with Django's built-in User model.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    is_technician = models.BooleanField(default=False)  # ADD THIS FIELD
+    is_technician = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
     country = models.CharField(max_length=100, blank=True, null=True)
-    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    profile_picture = models.CharField(max_length=255, blank=True, null=True)  # Changed to CharField
     date_of_birth = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -36,4 +36,5 @@ def create_user_profile(sender, instance, created, **kwargs):
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     """Save UserProfile when User is saved"""
-    instance.profile.save()
+    if hasattr(instance, 'profile'):
+        instance.profile.save()
