@@ -1,3 +1,5 @@
+from django.contrib.auth.forms import PasswordChangeForm
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -7,6 +9,8 @@ from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.shortcuts import render
+
+from .models import Ticket, UserSettings
 
 
 def role_select_view(request):
@@ -337,3 +341,63 @@ def technician_profile_view(request):
         'title': 'Technician Profile - FixIT'
     }
     return render(request, 'dashboard/technician_profile.html', context)
+
+#SPRINT 2
+@login_required
+def ticket_history(request):
+    tickets = Ticket.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'accounts/history.html', {
+        'tickets': tickets
+    })
+
+
+#SETTINGS PAGE
+@login_required
+def settings_view(request):
+    """Display settings page."""
+    settings, created = UserSettings.objects.get_or_create(user=request.user)
+    context = {
+        'settings': settings
+    }
+    return render(request, 'dashboard/settings.html', context)
+
+
+@login_required
+def update_notifications(request):
+    """Update notification preferences via AJAX or form submission."""
+    if request.method == 'POST':
+        settings, _ = UserSettings.objects.get_or_create(user=request.user)
+        email_pref = request.POST.get('email_notifications') == 'true'
+        sms_pref = request.POST.get('sms_notifications') == 'true'
+        settings.email_notifications = email_pref
+        settings.sms_notifications = sms_pref
+        settings.save()
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def change_password_settings(request):
+    """Allow user to change password."""
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        # Validate passwords match
+        if new_password != confirm_password:
+            messages.error(request, "Passwords do not match!")
+            return render(request, 'accounts/change_password.html')
+
+        # Update the logged-in user's password
+        user = request.user
+        user.set_password(new_password)
+        user.save()
+
+        # Re-authenticate user after password change
+        update_session_auth_hash(request, user)  # Important: keeps user logged in
+        messages.success(request, "Your password has been changed successfully!")
+        return redirect('login')  # Redirect to dashboard instead of login
+
+    # GET request - show the form
+    return render(request, 'accounts/change_password.html')
+

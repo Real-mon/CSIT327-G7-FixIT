@@ -38,3 +38,39 @@ def save_user_profile(sender, instance, **kwargs):
     """Save UserProfile when User is saved"""
     if hasattr(instance, 'profile'):
         instance.profile.save()
+
+#SPRINT 2
+class Ticket(models.Model):
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('pending', 'Pending'),
+        ('solved', 'Solved'),
+    ]
+
+    # If your Supabase table already has a column named "user_id", this will link correctly.
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id')
+
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+
+        db_table = 'ticket'
+
+    def __str__(self):
+        return f"{self.title} ({self.status})"
+
+
+class UserSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+    email_notifications = models.BooleanField(default=True)
+    sms_notifications = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        db_table = 'user_settings'  # Use your existing Supabase table name
+
+    def __str__(self):
+        return f"{self.user.username}'s Settings"

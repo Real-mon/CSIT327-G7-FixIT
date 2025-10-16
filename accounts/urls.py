@@ -14,4 +14,13 @@ urlpatterns = [
     path('change-password/', views.change_password_view, name='change_password'),  # ADD THIS
     path('technician-dashboard/', views.technician_dashboard_view, name='technician_dashboard'),
     path('user-dashboard/', views.user_dashboard_view, name='user_dashboard'),
+
+    #History
+    path('profile/history/', views.ticket_history, name='ticket_history'),
+
+
+    #Settings
+    path('settings/', views.settings_view, name='settings'),
+    path('settings/update/', views.update_notifications, name='update_notifications'),
+    path('settings/change-password/', views.change_password_settings, name='change_password'),
 ]

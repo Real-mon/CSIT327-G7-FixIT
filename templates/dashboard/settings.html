@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}User Dashboard - FixIT{% endblock %}
+
+{% block content %}
+<!-- Animated Background -->
+<div class="absolute inset-0 overflow-hidden">
+    <div class="absolute -inset-10 opacity-20">
+        <div class="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+        <div class="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-r from-[#bdf1f6] to-[#8fbaf3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
+    </div>
+</div>
+
+<div class="relative min-h-screen">
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white/20 backdrop-blur-lg border-r border-[#8fbaf3]/40 min-h-screen p-6">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3 mb-8">
+                <div class="w-10 h-10 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-xl flex items-center justify-center">
+                    <i class="fas fa-tools text-[#0245a3]"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-[#0245a3]">FixIT</h1>
+                    <p class="text-xs text-[#0245a3]">Support Portal</p>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="space-y-2">
+                <a href="{% url 'dashboard' %}" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
+                    <i class="fas fa-home w-5"></i>
+                    <span>Dashboard</span>
+                </a>
+                <!--Ticket-->
+                <a href="#" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-ticket-alt w-5"></i>
+                    <span>My Tickets</span>
+                </a>
+                <a href="{% url 'user_profile' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-user w-5"></i>
+                    <span>My Profile</span>
+                </a>
+                <!-- Settings -->
+                <a href="{% url 'settings' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-cog w-5"></i>
+                    <span>Settings</span>
+                </a>
+                <a href="{% url 'logout' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+    <div class="flex-1 p-12 bg-[#f7faff] min-h-screen">
+    <!-- Header -->
+    <div class="mb-10 text-center">
+        <h1 class="text-4xl font-extrabold text-[#0245a3] mb-3">Account Settings</h1>
+        <p class="text-[#0245a3]/80 text-lg">Manage your password and notifications</p>
+    </div>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <!-- Password Management -->
+        <div class="bg-[#0245a3] backdrop-blur-lg rounded-3xl border border-white/20 p-10 text-white shadow-2xl">
+            <h2 class="text-2xl font-bold mb-6">Change Password</h2>
+            <form method="POST" action="{% url 'change_password' %}" class="space-y-6">
+                {% csrf_token %}
+                <div>
+                    <label for="current_password" class="block text-white/90 text-base mb-2">Current Password</label>
+                    <input type="password" id="current_password" name="current_password"
+                           class="w-full p-4 rounded-xl text-white placeholder-white/60 bg-white/20 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white text-lg"
+                           placeholder="Enter current password">
+                </div>
+
+                <div>
+                    <label for="new_password" class="block text-white/90 text-base mb-2">New Password</label>
+                    <input type="password" id="new_password" name="new_password"
+                           class="w-full p-4 rounded-xl text-white placeholder-white/60 bg-white/20 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white text-lg"
+                           placeholder="Enter new password">
+                </div>
+
+                <div>
+                    <label for="confirm_password" class="block text-white/90 text-base mb-2">Confirm New Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password"
+                           class="w-full p-4 rounded-xl text-white placeholder-white/60 bg-white/20 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white text-lg"
+                           placeholder="Confirm new password">
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-white text-[#0245a3] font-semibold rounded-xl py-4 text-lg hover:bg-white/90 transition transform hover:scale-105">
+                    <i class="fas fa-key mr-2"></i> Update Password
+                </button>
+            </form>
+        </div>
+
+        <!-- Notification Preferences -->
+        <div class="bg-[#0245a3] backdrop-blur-lg rounded-3xl border border-white/20 p-10 text-white shadow-2xl">
+            <h2 class="text-2xl font-bold mb-6">Notification Preferences</h2>
+            <form method="POST" action="{% url 'update_notifications' %}" class="space-y-6">
+                {% csrf_token %}
+                <div class="flex items-center justify-between">
+                    <label for="email_notifications" class="text-white text-lg">Email Notifications</label>
+                    <input type="checkbox" id="email_notifications" name="email_notifications" class="w-6 h-6 accent-white">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="sms_notifications" class="text-white text-lg">SMS Notifications</label>
+                    <input type="checkbox" id="sms_notifications" name="sms_notifications" class="w-6 h-6 accent-white">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="app_notifications" class="text-white text-lg">App Notifications</label>
+                    <input type="checkbox" id="app_notifications" name="app_notifications" class="w-6 h-6 accent-white">
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-white text-[#0245a3] font-semibold rounded-xl py-4 text-lg hover:bg-white/90 transition transform hover:scale-105">
+                    <i class="fas fa-bell mr-2"></i> Save Preferences
+                </button>
+            </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .animation-delay-2000 { animation-delay: 2s; }
+</style>
+{% endblock %}
