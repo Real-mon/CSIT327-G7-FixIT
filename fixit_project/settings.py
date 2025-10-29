@@ -81,14 +81,14 @@ WSGI_APPLICATION = 'fixit_project.wsgi.application'
 #}
 
 # Database - Use Render's PostgreSQL
-# Database - Use Render's PostgreSQL
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
+        default=config('DATABASE_URL'),
         conn_max_age=600,
         ssl_require=True
     )
 }
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
