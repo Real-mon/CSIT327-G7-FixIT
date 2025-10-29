@@ -14,7 +14,9 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+'csit327-g7-fixit-1.onrender.com',  # Add your Render app URL here
+]
 
 # Application definition
 INSTALLED_APPS = [
