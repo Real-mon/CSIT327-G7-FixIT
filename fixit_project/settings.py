@@ -4,6 +4,7 @@ Django settings for fixit_project project.
 import os
 from pathlib import Path
 from decouple import config
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -11,10 +12,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
 
+# Detect if running on Render
+RENDER = config('RENDER', default=False, cast=bool)
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = []
+if RENDER:
+    ALLOWED_HOSTS.append(config('RENDER_EXTERNAL_HOSTNAME'))
+    ALLOWED_HOSTS.append('.onrender.com')
+ALLOWED_HOSTS.extend(config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(','))
 
 # Application definition
 INSTALLED_APPS = [
@@ -29,6 +37,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -60,15 +69,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'fixit_project.wsgi.application'
 
 # Database - PostgreSQL (Supabase)
+#DATABASES = {
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': config('DB_NAME'),
+    #     'USER': config('DB_USER'),
+    #     'PASSWORD': config('DB_PASSWORD'),
+    #     'HOST': config('DB_HOST'),
+    #     'PORT': config('DB_PORT'),
+    # }
+#}
+
+# Database - Use Render's PostgreSQL
+# Database - Use Render's PostgreSQL
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
 
 # Password validation
@@ -97,6 +116,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files (User uploaded files like profile pictures)
 MEDIA_URL = '/media/'
@@ -109,3 +129,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
