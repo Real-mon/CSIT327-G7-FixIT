@@ -14,6 +14,7 @@ urlpatterns = [
     path('change-password/', views.change_password_view, name='change_password'),  # ADD THIS
     path('technician-dashboard/', views.technician_dashboard_view, name='technician_dashboard'),
     path('user-dashboard/', views.user_dashboard_view, name='user_dashboard'),
+    path('technician_directory/', views.technician_directory_view, name='technician_directory'),
     path('user_message/', views.user_messages_view, name='user_message'),
     path('debug/storage-detailed/', views.debug_storage_detailed, name='debug_storage_detailed'),
     path('debug/comprehensive-test/', views.comprehensive_storage_test, name='comprehensive_test'),
@@ -23,7 +24,7 @@ urlpatterns = [
     path('debug/list-files/', views.list_bucket_files, name='list_files'),
     path('debug/upload-flow/', views.debug_upload_flow, name='debug_upload_flow'),
     path('debug/storage-type/', views.check_current_storage, name='check_storage_type'),
-     
+
 
      
 
