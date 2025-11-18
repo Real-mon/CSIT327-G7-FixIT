@@ -122,6 +122,13 @@ def dashboard_view(request):
     return redirect_to_correct_dashboard(request.user)
 
 @login_required
+def technician_directory_view(request):
+    return render(request, 'dashboard/technician_directory.html')
+
+
+
+
+@login_required
 def profile_update_view(request):
     """
     Handle profile updates including profile picture and user details
@@ -765,7 +772,7 @@ def user_profile_view(request):
             print(f"✅ Profile picture filename: {request.user.profile.profile_picture}")
             print(f"✅ Profile picture URL: {request.user.profile.profile_picture.url}")
             print(f"✅ Full image URL: https://{request.user.profile.profile_picture.url}")
-        
+    
         return redirect('user_profile')
     
     # Normal GET request

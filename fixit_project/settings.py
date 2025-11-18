@@ -6,18 +6,32 @@ from pathlib import Path
 from decouple import config
 import django.conf
 import django.core.files.storage
-
+from urllib.parse import urlparse
+from dotenv import load_dotenv
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env in local dev only (Render sets RENDER=true in production)
+if os.environ.get("RENDER", "") != "true":
+    load_dotenv()
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+# Use environment variable for Render, fallback to python-decouple for local dev
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", config('SECRET_KEY', default='unsafe-dev-key'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
+# Use environment variable for Render, fallback to python-decouple for local dev
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() == "true" or config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS - use environment variable for production, fallback to local hosts
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()]
+if not ALLOWED_HOSTS:  # Fallback for local development
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0']
+
+# CSRF_TRUSTED_ORIGINS - use environment variable for production
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 
 # Application definition
 INSTALLED_APPS = [
@@ -27,20 +41,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'storages',# For handling media files with cloud storage
-    'accounts',# Our custom app
-  
+    'storages',  # For handling media files with cloud storage
+    'accounts',  # Our custom app
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # <-- WhiteNoise for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
 ]
 
 ROOT_URLCONF = 'fixit_project.urls'
@@ -65,17 +78,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fixit_project.wsgi.application'
 
-# Database - PostgreSQL (Supabase)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+# Database configuration - Use DATABASE_URL for production, fallback to individual config for local
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    # Use dj-database-url for production (Render + Supabase)
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
-}
+else:
+    # Fallback to individual database config for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT'),
+            'OPTIONS': {'sslmode': 'require'}
+        },
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -101,8 +127,18 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Enable WhiteNoise for static files in production
+if os.environ.get("RENDER", "") == "true":
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Security (production)
+if os.environ.get("RENDER", "") == "true":
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # Media files (User uploaded files like profile pictures)
 MEDIA_URL = '/media/'
@@ -117,29 +153,28 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
-SUPABASE_URL = config('SUPABASE_URL')
-SUPABASE_KEY = config('SUPABASE_KEY')
+# Supabase configuration - use environment variables or fallback to config
+SUPABASE_URL = os.environ.get("SUPABASE_URL", config('SUPABASE_URL', default=''))
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", config('SUPABASE_KEY', default=''))
 
-
-
+# File storage configuration
 DEFAULT_FILE_STORAGE = 'storages.backends.s3.S3Storage'
 
-# Update STORAGES to match
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",  # Changed to S3Storage
+        "BACKEND": "storages.backends.s3.S3Storage",
     },
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if os.environ.get("RENDER", "") == "true" else "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
 # Supabase Storage Configuration
-AWS_ACCESS_KEY_ID = config('SUPABASE_S3_ACCESS_KEY')  # Use your project ref, NOT 'supabase'
-AWS_SECRET_ACCESS_KEY = config('SUPABASE_S3_SECRET_KEY')  # Your service_role key
+AWS_ACCESS_KEY_ID = os.environ.get("SUPABASE_S3_ACCESS_KEY", config('SUPABASE_S3_ACCESS_KEY', default=''))
+AWS_SECRET_ACCESS_KEY = os.environ.get("SUPABASE_S3_SECRET_KEY", config('SUPABASE_S3_SECRET_KEY', default=''))
 AWS_STORAGE_BUCKET_NAME = 'profile-pictures'
 AWS_S3_ENDPOINT_URL = 'https://gpxaxqghnwguwgpackig.storage.supabase.co/storage/v1/s3'
-AWS_S3_CUSTOM_DOMAIN = f"{config('SUPABASE_PROJECT_REF')}.supabase.co/storage/v1/object/public/profile-pictures"
+AWS_S3_CUSTOM_DOMAIN = f"{os.environ.get('SUPABASE_PROJECT_REF', config('SUPABASE_PROJECT_REF', default=''))}.supabase.co/storage/v1/object/public/profile-pictures"
 AWS_S3_REGION_NAME = 'ap-south-1'  # Adjust based on your Supabase region
 AWS_S3_ADDRESSING_STYLE = 'path'
 AWS_S3_FILE_OVERWRITE = False
@@ -150,4 +185,3 @@ AWS_S3_OBJECT_PARAMETERS = {
 }
 AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_S3_FILE_OVERWRITE = False
-
