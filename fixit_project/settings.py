@@ -4,6 +4,9 @@ Django settings for fixit_project project.
 import os
 from pathlib import Path
 from decouple import config
+import django.conf
+import django.core.files.storage
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,7 +27,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'accounts',  # Our custom app
+    'storages',# For handling media files with cloud storage
+    'accounts',# Our custom app
+  
 ]
 
 MIDDLEWARE = [
@@ -35,6 +40,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'fixit_project.urls'
@@ -101,6 +107,7 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 # Media files (User uploaded files like profile pictures)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+FILE_UPLOAD_PERMISSIONS = 0o644  # Set file upload permissions
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -109,3 +116,38 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
+SUPABASE_URL = config('SUPABASE_URL')
+SUPABASE_KEY = config('SUPABASE_KEY')
+
+
+
+DEFAULT_FILE_STORAGE = 'storages.backends.s3.S3Storage'
+
+# Update STORAGES to match
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",  # Changed to S3Storage
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# Supabase Storage Configuration
+AWS_ACCESS_KEY_ID = config('SUPABASE_S3_ACCESS_KEY')  # Use your project ref, NOT 'supabase'
+AWS_SECRET_ACCESS_KEY = config('SUPABASE_S3_SECRET_KEY')  # Your service_role key
+AWS_STORAGE_BUCKET_NAME = 'profile-pictures'
+AWS_S3_ENDPOINT_URL = 'https://gpxaxqghnwguwgpackig.storage.supabase.co/storage/v1/s3'
+AWS_S3_CUSTOM_DOMAIN = f"{config('SUPABASE_PROJECT_REF')}.supabase.co/storage/v1/object/public/profile-pictures"
+AWS_S3_REGION_NAME = 'ap-south-1'  # Adjust based on your Supabase region
+AWS_S3_ADDRESSING_STYLE = 'path'
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = 'public-read'
+AWS_QUERYSTRING_AUTH = False
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_FILE_OVERWRITE = False
+

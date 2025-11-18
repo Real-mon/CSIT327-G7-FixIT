@@ -155,13 +155,14 @@ class ProfilePictureForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = ['profile_picture']
-        widgets = {
-            'profile_picture': forms.FileInput(attrs={
-                'class': 'hidden',
-                'accept': 'image/*',
-                'id': 'profile_picture'
-            })
-        }
+    
+    profile_picture = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'hidden',
+            'accept': 'image/*'
+        })
+    )
     
     def clean_profile_picture(self):
         # Since it's a CharField now, we handle the file validation differently
