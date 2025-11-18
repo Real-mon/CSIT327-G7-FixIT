@@ -155,3 +155,37 @@ class BotMessage(models.Model):
     def __str__(self):
         sender = "Bot" if self.is_bot else self.sender.username
         return f"{sender}: {self.content[:50]}"
+
+
+ #Create Ticket
+from django.db import models
+from django.conf import settings  # If you use custom user models
+
+
+class CreateTicket(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High (Service Degradation)'),
+        ('critical', 'Critical (Service Down)'),
+    ]
+
+    CATEGORY_CHOICES = [
+        ('hardware', 'Hardware'),
+        ('software', 'Software'),
+        ('network', 'Network'),
+        ('other', 'Other'),
+    ]
+
+    # Link ticket to the user who created it (assuming a User model exists)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    priority = models.CharField(max_length=50, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=50, default='open')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Ticket {self.id}: {self.title}"

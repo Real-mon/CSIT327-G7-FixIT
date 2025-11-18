@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Chat with Technician - FixIT{% endblock %}
+
+{% block content %}
+<div class="flex-1 p-12 bg-[#f7faff] min-h-screen">
+    <div class="mb-10 text-center">
+        <h1 class="text-4xl font-extrabold text-[#0245a3] mb-3">Chat with Support</h1>
+        <p class="text-[#0245a3]/80 text-lg">Available Technicians for **{{ category }}** issues.</p>
+    </div>
+
+    <div class="max-w-4xl mx-auto grid grid-cols-1 gap-6">
+        {% for technician in technicians %}
+        <div class="bg-white rounded-2xl shadow-lg border border-[#8fbaf3]/20 p-6 flex justify-between items-center">
+            <div>
+                <h2 class="text-xl font-semibold text-[#0245a3]">{{ technician.get_full_name|default:technician.username }}</h2>
+                <p class="text-sm text-[#0245a3]/70">Expertise: {{ category }}</p>
+            </div>
+            <a href="{% url 'user_message' %}?user={{ technician.id }}" 
+               class="bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 hover:bg-[#1a5bb3] transition">
+                <i class="fas fa-paper-plane mr-2"></i> Start Chat
+            </a>
+        </div>
+        {% empty %}
+        <p class="text-[#0245a3]/80 text-center col-span-full">No technicians currently available for {{ category }} support.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

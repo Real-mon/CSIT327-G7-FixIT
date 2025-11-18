@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import UserProfile
+from django import forms
+from .models import CreateTicket
 
 class UserSignUpForm(UserCreationForm):
     """
@@ -169,3 +171,27 @@ class ProfilePictureForm(forms.ModelForm):
         picture = self.cleaned_data.get('profile_picture')
         # You might want to remove this validation or handle it differently
         return picture
+
+
+from django import forms
+from .models import CreateTicket
+
+
+class TicketCreationForm(forms.ModelForm):
+    # This form will use the fields defined in the Ticket model
+    class Meta:
+        model = CreateTicket
+        fields = ['title', 'category', 'priority', 'description']
+
+        # Optionally, add CSS classes directly here instead of in the HTML template
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'w-full px-5 py-3 rounded-xl text-[#0245a3] border-none focus:ring-4 focus:ring-[#8fbaf3] focus:outline-none'}),
+            'category': forms.Select(attrs={
+                'class': 'w-full px-5 py-3 rounded-xl text-[#0245a3] border-none focus:ring-4 focus:ring-[#8fbaf3] focus:outline-none appearance-none'}),
+            'priority': forms.Select(attrs={
+                'class': 'w-full px-5 py-3 rounded-xl text-[#0245a3] border-none focus:ring-4 focus:ring-[#8fbaf3] focus:outline-none appearance-none'}),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-5 py-3 rounded-xl text-[#0245a3] border-none focus:ring-4 focus:ring-[#8fbaf3] focus:outline-none',
+                'rows': 4}),
+        }

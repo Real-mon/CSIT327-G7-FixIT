@@ -35,4 +35,9 @@ urlpatterns = [
     path('settings/', views.settings_view, name='settings'),
     path('settings/update/', views.update_notifications, name='update_notifications'),
     path('settings/change-password/', views.change_password_settings, name='change_password'),
+
+    #CREATING TICKET
+    path('create-ticket/', views.create_ticket, name='create_ticket'),
+    path('my-tickets/', views.my_tickets, name='my_tickets'),  #VIEW
+path('available-technicians/', views.available_technicians, name='available-technicians'),
 ]

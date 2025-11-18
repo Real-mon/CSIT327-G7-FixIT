@@ -1066,3 +1066,50 @@ def generate_bot_response(message):
     
     # Default response for unrecognized messages
     return "🤔 **I'm here to help!**\n\nI understand you're asking about: *'" + message + "'*\n\nI specialize in:\n• Network and connectivity issues\n• Computer performance problems\n• Software and hardware troubleshooting\n• Account and access problems\n\nCould you provide more specific details about your issue, or use the 'Common Issues' dropdown menu for common problems?"
+
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .forms import TicketCreationForm
+
+@login_required
+def create_ticket(request):
+    if request.method == 'POST':
+        form = TicketCreationForm(request.POST)
+        if form.is_valid():
+            # Save the ticket, but don't commit to DB yet
+            ticket = form.save(commit=False)
+            # Assign the currently logged-in user
+            ticket.user = request.user
+            # Now save to the database
+            ticket.save()
+            # Redirect to the 'My Tickets' page or a success page
+            return redirect('my_tickets')
+    else:
+        # If it's a GET request, create a blank form
+        form = TicketCreationForm()
+
+    context = {
+        'form': form
+    }
+    return render(request, 'accounts/create_ticket.html', context)
+
+
+from django.shortcuts import render
+from .models import CreateTicket
+def my_tickets(request):
+    tickets = CreateTicket.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'accounts/my_tickets.html', {'tickets': tickets})
+
+#PLACEHOLDER
+from django.shortcuts import render
+def available_technicians(request):
+    # Placeholder data
+    technicians = [
+        {'id': 1, 'name': 'John Doe', 'specialty': 'Hardware'},
+        {'id': 2, 'name': 'Jane Smith', 'specialty': 'Software'},
+        {'id': 3, 'name': 'Bob Johnson', 'specialty': 'Network'},
+    ]
+
+    return render(request, 'accounts/available_technicians.html', {'technicians': technicians})
+

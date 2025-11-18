@@ -32,7 +32,7 @@
                     <i class="fas fa-home w-5"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="#" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                <a href="{% url 'my_tickets' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
                     <i class="fas fa-ticket-alt w-5"></i>
                     <span>My Tickets</span>
                 </a>
@@ -102,10 +102,11 @@
                     <div class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-2xl p-6 text-white text-center">
                         <h3 class="text-xl font-bold mb-3">Need Help?</h3>
                         <p class="text-white/80 mb-4">Create a new support ticket and get expert assistance</p>
-                        <button class="bg-white text-[#0245a3] font-semibold rounded-xl px-6 py-3 hover:bg-white/90 transition transform hover:scale-105">
-                            <i class="fas fa-plus mr-2"></i>
-                            Create Ticket
-                        </button>
+                       <a href="{% url 'create_ticket' %}"
+                          class="bg-white text-[#0245a3] font-semibold rounded-xl px-6 py-3 hover:bg-white/90 transition transform hover:scale-105 inline-flex items-center">
+                 <i class="fas fa-plus mr-2"></i>
+                    Create Ticket
+                       </a>
                     </div>
                 </div>
 
