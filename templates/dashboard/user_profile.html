@@ -32,6 +32,11 @@
                     <i class="fas fa-ticket-alt w-5"></i>
                     <span>My Tickets</span>
                 </a>
+                <!-- Messages Button Added Here -->
+                <a href="{% url 'user_message' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-comments w-5"></i>
+                    <span>Messages</span>
+                </a>
                 <a href="{% url 'user_profile' %}" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
                     <i class="fas fa-user w-5"></i>
                     <span>My Profile</span>
@@ -89,13 +94,43 @@
                                 <div class="w-40 h-40 rounded-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] flex items-center justify-center overflow-hidden border-4 border-[#8fbaf3] shadow-lg">
                                     {% if user.profile.profile_picture %}
                                         <img src="{{ user.profile.profile_picture.url }}"
-                                             alt="Profile Picture"
-                                             class="w-full h-full object-cover">
+                                            alt="Profile Picture"
+                                            class="w-full h-full object-cover"
+                                            id="profile-preview">
                                     {% else %}
-                                        <i class="fas fa-user text-white text-5xl"></i>
+                                        <i class="fas fa-user text-white text-5xl" id="default-icon"></i>
                                     {% endif %}
                                 </div>
                             </div>
+                            
+                            <!-- Profile Picture Upload Form -->
+                            <form method="post" enctype="multipart/form-data" class="w-full" id="profile-picture-form">
+                                {% csrf_token %}
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-[#0245a3] font-medium mb-2">Update Picture</label>
+                                        <input type="file" 
+                                               name="profile_picture" 
+                                               id="profile-picture-input"
+                                               accept="image/*"
+                                               class="w-full text-[#0245a3] text-sm
+                                                      file:mr-4 file:py-2 file:px-4 
+                                                      file:rounded-full file:border-0 
+                                                      file:text-sm file:font-semibold 
+                                                      file:bg-[#8fbaf3] file:text-[#0245a3] 
+                                                      hover:file:bg-[#0245a3] hover:file:text-white
+                                                      transition-colors">
+                                        <p class="text-xs text-[#0245a3]/70 mt-1">Max file size: 5MB. Supported: JPG, PNG, GIF, BMP</p>
+                                    </div>
+                                    <button type="submit" 
+                                            name="update_picture"
+                                            class="w-full bg-[#0245a3] text-white font-semibold rounded-xl px-4 py-3 hover:bg-[#0245a3]/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                            id="upload-button">
+                                        <i class="fas fa-upload mr-2"></i>
+                                        Upload Picture
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
@@ -189,6 +224,21 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Quick Actions Card -->
+                    <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                        <h2 class="text-xl font-bold text-[#0245a3] mb-4">Quick Actions</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <a href="{% url 'profile_update' %}" class="bg-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl p-4 hover:bg-[#8fbaf3]/80 transition flex items-center justify-center">
+                                <i class="fas fa-user-edit mr-2"></i>
+                                Edit Full Profile
+                            </a>
+                            <a href="{% url 'change_password' %}" class="bg-[#0245a3] text-white font-semibold rounded-xl p-4 hover:bg-[#0245a3]/90 transition flex items-center justify-center">
+                                <i class="fas fa-key mr-2"></i>
+                                Change Password
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -197,5 +247,99 @@
 
 <style>
     .animation-delay-2000 { animation-delay: 2s; }
+    
+    /* Custom file input styling */
+    input[type="file"]::-webkit-file-upload-button {
+        background: #8fbaf3;
+        color: #0245a3;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 9999px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    input[type="file"]::-webkit-file-upload-button:hover {
+        background: #0245a3;
+        color: white;
+    }
 </style>
+
+<script>
+    // Real-time image preview
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('profile-picture-input');
+        const profilePreview = document.getElementById('profile-preview');
+        const defaultIcon = document.getElementById('default-icon');
+        const uploadButton = document.getElementById('upload-button');
+        
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Validate file type
+                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp'];
+                    if (!validTypes.includes(file.type)) {
+                        alert('Please select a valid image file (JPG, PNG, GIF, BMP)');
+                        fileInput.value = '';
+                        return;
+                    }
+                    
+                    // Validate file size (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('File size must be less than 5MB');
+                        fileInput.value = '';
+                        return;
+                    }
+                    
+                    // Create preview
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        if (profilePreview) {
+                            profilePreview.src = e.target.result;
+                        } else {
+                            // Create new image element if it doesn't exist
+                            const newImg = document.createElement('img');
+                            newImg.src = e.target.result;
+                            newImg.alt = 'Profile Picture Preview';
+                            newImg.className = 'w-full h-full object-cover';
+                            newImg.id = 'profile-preview';
+                            
+                            const container = document.querySelector('.w-40.h-40');
+                            if (container) {
+                                // Remove default icon
+                                if (defaultIcon) {
+                                    defaultIcon.style.display = 'none';
+                                }
+                                container.appendChild(newImg);
+                            }
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                    
+                    // Enable upload button
+                    uploadButton.disabled = false;
+                } else {
+                    // Disable upload button if no file selected
+                    uploadButton.disabled = true;
+                }
+            });
+        }
+        
+        // Show loading state on form submission
+        const form = document.getElementById('profile-picture-form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+                uploadButton.disabled = true;
+            });
+        }
+        
+        // Initially disable upload button if no file is selected
+        if (fileInput && !fileInput.files[0]) {
+            uploadButton.disabled = true;
+        }
+    });
+</script>
 {% endblock %}
