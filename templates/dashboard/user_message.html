@@ -1,0 +1,655 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - FixIT{% endblock %}
+
+{% block content %}
+<!-- Animated Background -->
+<div class="absolute inset-0 overflow-hidden">
+    <div class="absolute -inset-10 opacity-20">
+        <div class="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+        <div class="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-r from-[#bdf1f6] to-[#8fbaf3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
+    </div>
+</div>
+
+<div class="relative min-h-screen">
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white/20 backdrop-blur-lg border-r border-[#8fbaf3]/40 min-h-screen p-6">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3 mb-8">
+                <div class="w-10 h-10 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-xl flex items-center justify-center">
+                    <i class="fas fa-tools text-[#0245a3]"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-[#0245a3]">FixIT</h1>
+                    <p class="text-xs text-[#0245a3]">Support Portal</p>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="space-y-2">
+                <a href="{% url 'dashboard' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-home w-5"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-ticket-alt w-5"></i>
+                    <span>My Tickets</span>
+                </a>
+                <a href="{% url 'user_message' %}" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
+                    <i class="fas fa-comments w-5"></i>
+                    <span>Messages</span>
+                </a>
+                <a href="{% url 'user_profile' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-user w-5"></i>
+                    <span>My Profile</span>
+                </a>
+                <a href="{% url 'settings' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-cog w-5"></i>
+                    <span>Settings</span>
+                </a>
+                <a href="{% url 'logout' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-8">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-[#0245a3] mb-2">Messages</h1>
+                <p class="text-[#0245a3]">Communicate with support technicians and get instant help</p>
+            </div>
+
+            <!-- Display Messages -->
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="{% if message.tags == 'success' %}bg-green-100 border border-green-400 text-green-700{% else %}bg-blue-100 border border-blue-400 text-blue-700{% endif %} px-4 py-3 rounded mb-2">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[600px]">
+                <!-- Chats Sidebar - Updated Design -->
+                <div class="lg:col-span-1 bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-4">
+                    <!-- Search Bar -->
+                    <div class="mb-4">
+                        <div class="relative">
+                            <input type="text" placeholder="Search chats..." 
+                                   class="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-2 pl-10 text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none focus:border-[#8fbaf3]">
+                            <i class="fas fa-search absolute left-3 top-3 text-[#0245a3] opacity-70"></i>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="mb-4">
+                        <div class="flex space-x-2 mb-3">
+                            <button class="flex-1 bg-[#0245a3] text-white text-sm font-semibold rounded-lg px-3 py-2">
+                                PINNED
+                            </button>
+                            <button class="flex-1 bg-white/20 text-[#0245a3] text-sm font-semibold rounded-lg px-3 py-2 border border-white/30">
+                                ALL CHATS
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chats Header -->
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-[#0245a3]">Recent Chats</h3>
+                        <!-- New Chat Button -->
+                        <button onclick="openNewChatModal()" class="bg-[#0245a3] text-white p-2 rounded-lg hover:bg-[#8fbaf3] transition">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Chats List -->
+                    <div class="space-y-2 max-h-[400px] overflow-y-auto">
+                        {% for chat in user_chats %}
+                        <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg hover:bg-white/20 transition cursor-pointer {% if selected_chat and selected_chat.id == chat.id %}bg-white/30 border border-[#8fbaf3]{% endif %}"
+                             onclick="window.location.href='?chat={{ chat.id }}'">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3">
+                                    <!-- Chat Avatar -->
+                                    <div class="w-10 h-10 {% if chat.is_bot %}bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24]{% else %}bg-gradient-to-r from-[#8fbaf3] to-[#0245a3]{% endif %} rounded-full flex items-center justify-center text-white font-semibold">
+                                        {% if chat.is_bot %}
+                                            <i class="fas fa-robot"></i>
+                                        {% else %}
+                                            {{ chat.contact_name|first|upper }}
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold text-[#0245a3]">
+                                            {% if chat.is_bot %}FixIT Assistant{% else %}{{ chat.contact_name }}{% endif %}
+                                        </div>
+                                        <div class="text-xs text-[#0245a3] opacity-70">
+                                            {% if chat.is_bot %}AI Support Bot{% else %}Technician{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if not chat.is_bot %}
+                            <button onclick="event.stopPropagation(); deleteChat({{ chat.id }})" class="text-red-500 hover:text-red-700 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-8 text-[#0245a3] opacity-70">
+                            <i class="fas fa-comments text-3xl mb-2"></i>
+                            <p>No chats yet</p>
+                            <p class="text-sm mt-2">Start a new chat to get help</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+<div class="lg:col-span-3 bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6 flex flex-col">
+    {% if selected_chat %}
+    <!-- Messages Header -->
+    <div class="border-b border-white/20 pb-4 mb-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <!-- Chat Avatar -->
+                <div class="w-12 h-12 {% if selected_chat.is_bot %}bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24]{% else %}bg-gradient-to-r from-[#8fbaf3] to-[#0245a3]{% endif %} rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                    {% if selected_chat.is_bot %}
+                        <i class="fas fa-robot"></i>
+                    {% else %}
+                        {{ selected_chat.contact_name|first|upper }}
+                    {% endif %}
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-[#0245a3]">
+                        {% if selected_chat.is_bot %}FixIT Assistant{% else %}{{ selected_chat.contact_name }}{% endif %}
+                    </h3>
+                    <p class="text-sm text-[#0245a3] opacity-70">
+                        {% if selected_chat.is_bot %}Online • AI Support Bot{% else %}Online • Technician{% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <!-- Common Issues Dropdown -->
+                {% if selected_chat.is_bot %}
+                <div class="relative group">
+                    <button class="bg-white/20 text-[#0245a3] p-2 rounded-lg hover:bg-white/30 transition flex items-center space-x-1">
+                        <i class="fas fa-question-circle"></i>
+                        <span>Common Issues</span>
+                        <i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden group-hover:block z-10">
+                        <div class="p-2">
+                            <div class="text-xs font-semibold text-gray-500 px-2 py-1">NETWORK ISSUES</div>
+                            <button onclick="sendQuickQuestion('Internet not showing in network options')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-wifi text-blue-500 w-4"></i>
+                                <span>No Internet Connection</span>
+                            </button>
+                            <button onclick="sendQuickQuestion('WiFi keeps disconnecting')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-signal text-blue-500 w-4"></i>
+                                <span>WiFi Connection Drops</span>
+                            </button>
+                            <button onclick="sendQuickQuestion('Slow internet speed')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-tachometer-alt text-blue-500 w-4"></i>
+                                <span>Slow Internet Speed</span>
+                            </button>
+                            
+                            <div class="border-t my-1"></div>
+                            <div class="text-xs font-semibold text-gray-500 px-2 py-1">DEVICE PROBLEMS</div>
+                            <button onclick="sendQuickQuestion('Computer running very slow')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-desktop text-green-500 w-4"></i>
+                                <span>Computer Running Slow</span>
+                            </button>
+                            <button onclick="sendQuickQuestion('Printer not working')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-print text-green-500 w-4"></i>
+                                <span>Printer Not Working</span>
+                            </button>
+                            <button onclick="sendQuickQuestion('Software installation failed')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-download text-green-500 w-4"></i>
+                                <span>Software Installation</span>
+                            </button>
+                            
+                            <div class="border-t my-1"></div>
+                            <div class="text-xs font-semibold text-gray-500 px-2 py-1">ACCOUNT & ACCESS</div>
+                            <button onclick="sendQuickQuestion('Cannot login to my account')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-key text-red-500 w-4"></i>
+                                <span>Login Problems</span>
+                            </button>
+                            <button onclick="sendQuickQuestion('Password reset not working')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-lock text-red-500 w-4"></i>
+                                <span>Password Reset Issues</span>
+                            </button>
+                            <button onclick="sendQuickQuestion('Email not receiving messages')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
+                                <i class="fas fa-envelope text-red-500 w-4"></i>
+                                <span>Email Problems</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if not selected_chat.is_bot %}
+                <button class="bg-white/20 text-[#0245a3] p-2 rounded-lg hover:bg-white/30 transition">
+                    <i class="fas fa-phone"></i>
+                </button>
+                <button class="bg-white/20 text-[#0245a3] p-2 rounded-lg hover:bg-white/30 transition">
+                    <i class="fas fa-video"></i>
+                </button>
+                {% endif %}
+                <button class="bg-white/20 text-[#0245a3] p-2 rounded-lg hover:bg-white/30 transition">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Messages List -->
+    <div class="flex-1 overflow-y-auto space-y-4 mb-4 max-h-[400px] p-4 bg-white/10 rounded-lg" id="messagesContainer">
+        {% if selected_chat.is_bot and not chat_messages %}
+        <!-- Default Bot Welcome Message with Enhanced Quick Actions -->
+        <div class="text-center">
+            <div class="bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24] text-white rounded-2xl p-6 inline-block max-w-[90%] mb-6">
+                <div class="flex items-start space-x-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="flex-1 text-left">
+                        <h4 class="font-bold mb-2 text-lg">Hello! I'm FixIT Assistant 👋</h4>
+                        <p class="mb-4">I'm here to help you with common technical issues and FAQs. Choose from common issues below or type your question!</p>
+                        
+                        <!-- Quick Action Categories -->
+                        <div class="space-y-3">
+                            <!-- Network Issues -->
+                            <div>
+                                <h5 class="font-semibold mb-2 text-white/90">🌐 Network & Connectivity</h5>
+                                <div class="grid grid-cols-2 gap-2 mb-3">
+                                    <button onclick="sendQuickQuestion('Internet not showing in network options')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        📡 No Internet
+                                    </button>
+                                    <button onclick="sendQuickQuestion('WiFi keeps disconnecting')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        📶 WiFi Drops
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Slow internet speed')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🐢 Slow Speed
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Cannot connect to VPN')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🔒 VPN Issues
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Device Problems -->
+                            <div>
+                                <h5 class="font-semibold mb-2 text-white/90">💻 Device & Hardware</h5>
+                                <div class="grid grid-cols-2 gap-2 mb-3">
+                                    <button onclick="sendQuickQuestion('Computer running very slow')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🖥️ Slow Computer
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Printer not working')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🖨️ Printer Issues
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Blue screen error')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        💙 Blue Screen
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Computer wont turn on')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        ⚡ Won't Start
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Software & Apps -->
+                            <div>
+                                <h5 class="font-semibold mb-2 text-white/90">📱 Software & Applications</h5>
+                                <div class="grid grid-cols-2 gap-2 mb-3">
+                                    <button onclick="sendQuickQuestion('Software installation failed')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        📥 Install Issues
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Program keeps crashing')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        💥 App Crashes
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Update not working')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🔄 Update Problems
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Virus or malware detected')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🛡️ Virus Scan
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Account & Access -->
+                            <div>
+                                <h5 class="font-semibold mb-2 text-white/90">🔐 Account & Access</h5>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="sendQuickQuestion('Cannot login to my account')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🔑 Login Problems
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Password reset not working')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🔓 Reset Password
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Email not receiving messages')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        📧 Email Issues
+                                    </button>
+                                    <button onclick="sendQuickQuestion('Account locked or suspended')" class="bg-white/20 text-white text-sm rounded-lg px-3 py-2 hover:bg-white/30 transition text-left">
+                                        🚫 Account Locked
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick links -->
+                        <div class="mt-4 pt-3 border-t border-white/20">
+                            <p class="text-xs opacity-80 mb-2">Need something else?</p>
+                            <div class="flex flex-wrap gap-1 justify-center">
+                                <span class="bg-white/10 px-2 py-1 rounded cursor-pointer hover:bg-white/20 text-xs" onclick="sendQuickQuestion('How to contact human support')">Contact Human Support</span>
+                                <span class="bg-white/10 px-2 py-1 rounded cursor-pointer hover:bg-white/20 text-xs" onclick="sendQuickQuestion('Check my ticket status')">Check Ticket Status</span>
+                                <span class="bg-white/10 px-2 py-1 rounded cursor-pointer hover:bg-white/20 text-xs" onclick="sendQuickQuestion('Billing and payment questions')">Billing Help</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% for message in chat_messages %}
+        <div class="{% if message.sender == user %}text-right{% endif %}">
+            <div class="{% if message.sender == user %}bg-[#8fbaf3] text-white{% else %}{% if selected_chat.is_bot %}bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24] text-white{% else %}bg-white/30 text-[#0245a3]{% endif %}{% endif %} rounded-2xl p-4 inline-block max-w-[70%] shadow-sm">
+                <div class="flex items-start space-x-3">
+                    {% if message.sender != user %}
+                    <div class="w-8 h-8 {% if selected_chat.is_bot %}bg-white/20{% else %}bg-gradient-to-r from-[#8fbaf3] to-[#0245a3]{% endif %} rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                        {% if selected_chat.is_bot %}
+                            <i class="fas fa-robot text-xs"></i>
+                        {% else %}
+                            {{ selected_chat.contact_name|first|upper }}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="flex-1">
+                        <p class="{% if message.sender == user %}text-white{% else %}{% if selected_chat.is_bot %}text-white{% else %}text-[#0245a3]{% endif %}{% endif %} whitespace-pre-wrap">
+                            {{ message.content }}
+                        </p>
+                        <div class="text-xs {% if message.sender == user %}text-white/70{% else %}{% if selected_chat.is_bot %}text-white/70{% else %}text-[#0245a3]/70{% endif %}{% endif %} mt-2">
+                            {{ message.timestamp|date:"g:i A" }}
+                        </div>
+                    </div>
+                    {% if message.sender == user %}
+                    <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-[#0245a3] font-semibold text-xs flex-shrink-0">
+                        {{ user.username|first|upper }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        {% if not selected_chat.is_bot %}
+        <div class="text-center py-12 text-[#0245a3] opacity-70">
+            <i class="fas fa-comments text-4xl mb-3"></i>
+            <h3 class="text-xl font-bold mb-2">No messages yet</h3>
+            <p>Start a conversation with {{ selected_chat.contact_name }}</p>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    
+    <!-- Message Input -->
+    <div class="border-t border-white/20 pt-4">
+        <form method="POST" class="flex gap-3" id="messageForm">
+            {% csrf_token %}
+            <input type="hidden" name="send_message" value="true">
+            <input type="hidden" name="chat_id" value="{{ selected_chat.id }}">
+            <div class="flex-1 bg-white/20 border border-white/30 rounded-2xl px-4 py-3 flex items-center">
+                <button type="button" class="text-[#0245a3] opacity-70 hover:opacity-100 mr-3">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <input type="text" name="message_content" placeholder="Type your message..." 
+                       class="flex-1 bg-transparent text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none border-none"
+                       id="messageInput" autocomplete="off">
+                <button type="button" class="text-[#0245a3] opacity-70 hover:opacity-100 ml-3">
+                    <i class="fas fa-smile"></i>
+                </button>
+            </div>
+            <button type="submit" class="bg-[#0245a3] text-white px-6 py-3 rounded-2xl hover:bg-[#8fbaf3] transition transform hover:scale-105 shadow-lg">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <!-- No Chat Selected -->
+    <div class="text-center py-12 flex-1 flex items-center justify-center">
+        <div>
+            <i class="fas fa-comments text-6xl text-[#0245a3] mb-4 opacity-50"></i>
+            <h3 class="text-xl font-bold text-[#0245a3] mb-2">Start a Conversation</h3>
+            <p class="text-[#0245a3] opacity-70 mb-4">Choose a chat from the sidebar or start a new one</p>
+            <div class="space-y-3">
+                <button onclick="openNewChatModal()" class="block w-full bg-[#0245a3] text-white px-6 py-3 rounded-lg hover:bg-[#8fbaf3] transition">
+                    <i class="fas fa-plus mr-2"></i>New Chat with Assistant
+                </button>
+                <button onclick="openAddContactModal()" class="block w-full bg-white/20 text-[#0245a3] px-6 py-3 rounded-lg hover:bg-white/30 transition border border-white/30">
+                    <i class="fas fa-user-plus mr-2"></i>Message Technician
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Chat Modal -->
+<div id="newChatModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl p-6 w-96">
+        <h3 class="text-xl font-bold text-[#0245a3] mb-4">Start New Chat</h3>
+        <div class="space-y-3">
+            <!-- Start with Assistant -->
+            <button onclick="startBotChat()" class="w-full bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24] text-white rounded-lg p-4 text-left hover:opacity-90 transition">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold">FixIT Assistant</h4>
+                        <p class="text-sm opacity-90">Get instant help with common issues</p>
+                    </div>
+                </div>
+            </button>
+            
+            <!-- Message Technician -->
+            <button onclick="openAddContactModal()" class="w-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white rounded-lg p-4 text-left hover:opacity-90 transition">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-cog"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold">Message Technician</h4>
+                        <p class="text-sm opacity-90">Connect with support staff</p>
+                    </div>
+                </div>
+            </button>
+        </div>
+        <div class="mt-4">
+            <button onclick="closeNewChatModal()" class="w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Contact Modal -->
+<div id="addContactModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl p-6 w-96">
+        <h3 class="text-xl font-bold text-[#0245a3] mb-4">Message Technician</h3>
+        <form method="POST" id="contactForm">
+            {% csrf_token %}
+            <input type="hidden" name="add_contact" value="true">
+            <div class="mb-4">
+                <label class="block text-[#0245a3] mb-2">Select Technician:</label>
+                <select name="technician_id" class="w-full bg-white/20 border border-[#8fbaf3] rounded-lg px-4 py-2 text-[#0245a3] focus:outline-none focus:border-[#0245a3]">
+                    <option value="">Choose a technician...</option>
+                    {% for tech in technicians %}
+                    <option value="{{ tech.user.id }}">
+                        {{ tech.user.first_name }} {{ tech.user.last_name }} ({{ tech.user.username }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="closeAddContactModal()" class="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 bg-[#0245a3] text-white px-4 py-2 rounded-lg hover:bg-[#8fbaf3] transition">
+                    Start Chat
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .animation-delay-2000 { animation-delay: 2s; }
+</style>
+
+<script>
+    function openNewChatModal() {
+        document.getElementById('newChatModal').classList.remove('hidden');
+    }
+    
+    function closeNewChatModal() {
+        document.getElementById('newChatModal').classList.add('hidden');
+    }
+    
+    function openAddContactModal() {
+        closeNewChatModal();
+        document.getElementById('addContactModal').classList.remove('hidden');
+    }
+    
+    function closeAddContactModal() {
+        document.getElementById('addContactModal').classList.add('hidden');
+    }
+    
+    function startBotChat() {
+        console.log('Starting bot chat...');
+        
+        const formData = new FormData();
+        formData.append('start_bot_chat', 'true');
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        fetch('', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Response:', data);
+            if (data.success) {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.href = '?chat=' + data.chat_id;
+                }
+            } else {
+                alert('Error: ' + (data.error || 'Unable to start chat'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error starting chat with assistant. Please try again.');
+        });
+    }
+    
+    function sendQuickQuestion(question) {
+    console.log('Sending quick question:', question);
+    
+    // Set the message input value
+    const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+        messageInput.value = question;
+        
+        // Submit the form
+        const messageForm = document.getElementById('messageForm');
+            if (messageForm) {
+            messageForm.submit();
+            }
+        }
+    }
+    
+    function deleteChat(chatId) {
+        if (confirm('Are you sure you want to delete this chat?')) {
+            const formData = new FormData();
+            formData.append('delete_chat', 'true');
+            formData.append('chat_id', chatId);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting chat');
+            });
+        }
+    }
+    
+    // Auto-scroll to bottom of messages
+    window.addEventListener('load', function() {
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    });
+    
+    // Handle form submissions
+    document.addEventListener('DOMContentLoaded', function() {
+        // Contact form submission
+        const contactForm = document.getElementById('contactForm');
+        if (contactForm) {
+            contactForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                
+                fetch('', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        } else {
+                            location.reload();
+                        }
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error adding contact');
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

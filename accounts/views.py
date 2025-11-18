@@ -1,3 +1,4 @@
+import os
 from django.contrib.auth.forms import PasswordChangeForm
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
@@ -11,6 +12,11 @@ from django.contrib.auth.models import User
 from django.shortcuts import render
 
 from .models import Ticket, UserSettings
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q
+from .models import User, UserProfile, Message, Contact, BotChat, BotMessage
+from django.utils import timezone
 
 
 def role_select_view(request):
@@ -115,102 +121,86 @@ def dashboard_view(request):
     """
     return redirect_to_correct_dashboard(request.user)
 
-###
 @login_required
 def profile_update_view(request):
     """
     Handle profile updates including profile picture and user details
     """
-    # Initialize forms
+    if request.method == 'POST' and 'profile_picture' in request.FILES:
+        print("=== PROFILE PICTURE UPLOAD START ===")
+        uploaded_file = request.FILES['profile_picture']
+        print(f"📁 File received: {uploaded_file.name}, Size: {uploaded_file.size}")
+        
+        # Validate file size
+        if uploaded_file.size > 5 * 1024 * 1024:
+            messages.error(request, 'Image file too large ( > 5MB )')
+            return redirect('profile_update')
+        
+        # Validate file type and get proper extension
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
+        file_name = uploaded_file.name.lower()
+        
+        # Extract extension properly
+        if '.' in file_name:
+            file_extension = '.' + file_name.split('.')[-1]
+            if file_extension == '.jpeg':
+                file_extension = '.jpg'
+        else:
+            messages.error(request, 'Please upload a valid image file with extension')
+            return redirect('profile_update')
+        
+        if file_extension not in valid_extensions:
+            messages.error(request, 'Please upload a valid image file (JPG, PNG, GIF, BMP)')
+            return redirect('profile_update')
+        
+        # Handle file upload using Supabase storage
+        try:
+            import uuid
+            from django.core.files.storage import default_storage
+            
+            # Generate unique filename - SIMPLIFIED PATH
+            unique_filename = f"{uuid.uuid4()}{file_extension}"
+            
+            print(f"🔄 Attempting to save to Supabase: {unique_filename}")
+            print(f"🔍 File extension: {file_extension}")
+            
+            # Save the file using Django's storage backend
+            file_path = default_storage.save(unique_filename, uploaded_file)
+            
+            print(f"✅ File saved to: {file_path}")
+            print(f"🔍 Full file path: {file_path}")
+            
+            # Update the profile with the file path
+            request.user.profile.profile_picture = file_path
+            request.user.profile.save()
+            
+            # Debug: Check what was actually saved
+            print(f"✅ Profile picture filename in DB: {request.user.profile.profile_picture}")
+            
+            # Generate URL and verify
+            try:
+                file_url = default_storage.url(file_path)
+                print(f"🌐 Generated File URL: {file_url}")
+                
+                # Construct manual URL to verify
+                manual_url = f"https://gpxaxqghnwguwgpackig.supabase.co/storage/v1/object/public/profile-pictures/{file_path}"
+                print(f"🔗 Manual File URL: {manual_url}")
+                
+            except Exception as url_error:
+                print(f"⚠️ URL generation failed: {url_error}")
+            
+            messages.success(request, 'Your profile picture has been updated successfully!')
+            
+        except Exception as e:
+            print("❌ Error saving profile picture:", str(e))
+            messages.error(request, f'Error updating profile picture: {str(e)}')
+        
+        return redirect('profile_update')
+    
+    # Handle GET requests
     user_form = UserUpdateForm(instance=request.user)
     profile_form = ProfileUpdateForm(instance=request.user.profile)
     picture_form = ProfilePictureForm(instance=request.user.profile)
-
-    if request.method == 'POST':
-        print("=== FORM SUBMISSION START ===")
-        print("POST data:", dict(request.POST))
-        print("All POST keys:", list(request.POST.keys()))
-        print("FILES data:", dict(request.FILES))
-        
-        # Determine which form was submitted based on field presence
-        
-        # Check if this is the User form (has user-related fields)
-        if any(field in request.POST for field in ['first_name', 'last_name', 'username', 'email']):
-            print("🔄 Detected User Form Submission")
-            user_form = UserUpdateForm(request.POST, instance=request.user)
-            if user_form.is_valid():
-                user = user_form.save()
-                print(f"✅ Saved user: {user.first_name} {user.last_name}")
-                messages.success(request, 'Your basic information has been updated successfully!')
-                return redirect('profile_update')
-            else:
-                print("❌ User form errors:", user_form.errors)
-                messages.error(request, 'Please correct the errors in basic information.')
-        
-        # Check if this is the Profile form (has profile-related fields)
-        elif any(field in request.POST for field in ['phone_number', 'address', 'city', 'country', 'date_of_birth']):
-            print("🔄 Detected Profile Form Submission")
-            profile_form = ProfileUpdateForm(request.POST, instance=request.user.profile)
-            if profile_form.is_valid():
-                profile = profile_form.save()
-                print(f"✅ Saved profile - Phone: {profile.phone_number}, Address: {profile.address}")
-                messages.success(request, 'Your profile information has been updated successfully!')
-                return redirect('profile_update')
-            else:
-                print("❌ Profile form errors:", profile_form.errors)
-                messages.error(request, 'Please correct the errors in profile information.')
-        
-        # Check if this is the Picture form (has files OR the update_picture button)
-        elif 'profile_picture' in request.FILES or 'update_picture' in request.POST:
-            print("🔄 Detected Picture Form Submission")
-            
-            if 'profile_picture' in request.FILES:
-                uploaded_file = request.FILES['profile_picture']
-                print(f"📁 File received: {uploaded_file.name}, Size: {uploaded_file.size}")
-                
-                # Validate file size
-                if uploaded_file.size > 5 * 1024 * 1024:
-                    messages.error(request, 'Image file too large ( > 5MB )')
-                    return redirect('profile_update')
-                
-                # Validate file type
-                valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
-                file_extension = os.path.splitext(uploaded_file.name)[1].lower()
-                if not any(file_extension.endswith(ext) for ext in valid_extensions):
-                    messages.error(request, 'Please upload a valid image file (JPG, PNG, GIF, BMP)')
-                    return redirect('profile_update')
-                
-                # Handle file upload
-                try:
-                    from django.core.files.storage import FileSystemStorage
-                    import uuid
-                    import os
-                    
-                    fs = FileSystemStorage()
-                    file_extension = os.path.splitext(uploaded_file.name)[1]
-                    unique_filename = f"profile_pics/{uuid.uuid4()}{file_extension}"
-                    filename = fs.save(unique_filename, uploaded_file)
-                    
-                    # Update the profile with the file path
-                    request.user.profile.profile_picture = filename
-                    request.user.profile.save()
-                    
-                    print(f"✅ Saved profile picture: {filename}")
-                    messages.success(request, 'Your profile picture has been updated successfully!')
-                    
-                except Exception as e:
-                    print("❌ Error saving profile picture:", e)
-                    messages.error(request, 'Error updating profile picture. Please try again.')
-            else:
-                print("❌ No file selected for upload")
-                messages.error(request, 'Please select a file to upload.')
-            
-            return redirect('profile_update')
-        else:
-            print("❓ Could not determine which form was submitted")
-            messages.error(request, 'Form submission error. Please try again.')
-        
-        print("=== FORM SUBMISSION END ===")
 
     context = {
         'user_form': user_form,
@@ -218,7 +208,427 @@ def profile_update_view(request):
         'picture_form': picture_form,
         'title': 'Update Profile - FixIT'
     }
+    
     return render(request, 'accounts/profile_update.html', context)
+    
+ 
+@login_required
+def list_bucket_files(request):
+    """List all files in the storage bucket"""
+    import boto3
+    from django.conf import settings
+    from django.http import JsonResponse
+    
+    try:
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            region_name=settings.AWS_S3_REGION_NAME,
+        )
+        
+        # List all objects in the bucket
+        objects = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+        files = [obj['Key'] for obj in objects.get('Contents', [])]
+        
+        return JsonResponse({
+            'success': True,
+            'bucket': settings.AWS_STORAGE_BUCKET_NAME,
+            'file_count': len(files),
+            'files': files
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+        
+@login_required
+def comprehensive_storage_test(request):
+    """Step-by-step storage test with better error handling"""
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from django.http import JsonResponse
+    
+    test_results = {}
+    
+    try:
+        # Step 1: Basic storage check
+        test_results['storage_backend'] = str(default_storage.__class__)
+        
+        # Step 2: Test with proper image file extension
+        test_filename = f"comprehensive_test_{request.user.id}.jpg"  # Explicit .jpg extension
+        test_content = b"fake image content for testing"  # Simple text as fake image
+        
+        print(f"🧪 Testing with filename: {test_filename}")
+        
+        # Save
+        saved_path = default_storage.save(test_filename, ContentFile(test_content))
+        test_results['save_success'] = True
+        test_results['saved_path'] = saved_path
+        
+        # Check existence
+        exists = default_storage.exists(saved_path)
+        test_results['exists_check'] = exists
+        
+        # Get URL (without testing accessibility via requests)
+        try:
+            file_url = default_storage.url(saved_path)
+            test_results['url_generation'] = 'Success'
+            test_results['file_url'] = file_url
+            print(f"🌐 File URL generated: {file_url}")
+                
+        except Exception as e:
+            test_results['url_generation'] = f'Failed: {e}'
+            print(f"🔗 URL generation failed: {e}")
+        
+        # Read back
+        try:
+            with default_storage.open(saved_path) as f:
+                content = f.read()
+            test_results['read_success'] = True
+            test_results['content_matches'] = content == test_content
+        except Exception as e:
+            test_results['read_success'] = False
+            test_results['read_error'] = str(e)
+        
+        # Delete
+        try:
+            default_storage.delete(saved_path)
+            test_results['delete_success'] = True
+        except Exception as e:
+            test_results['delete_success'] = False
+            test_results['delete_error'] = str(e)
+            
+        test_results['overall_success'] = all([
+            test_results.get('save_success', False),
+            test_results.get('exists_check', False),
+            test_results.get('read_success', False),
+        ])
+        
+    except Exception as e:
+        test_results['overall_success'] = False
+        test_results['error'] = str(e)
+        test_results['error_type'] = type(e).__name__
+    
+    return JsonResponse(test_results)
+
+
+
+@login_required
+def debug_storage_detailed(request):
+    """Detailed storage debugging"""
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+    from django.http import JsonResponse
+    import boto3
+    
+    debug_info = {
+        'credentials': {
+            'aws_access_key_id': settings.AWS_ACCESS_KEY_ID,
+            'aws_secret_length': len(settings.AWS_SECRET_ACCESS_KEY) if settings.AWS_SECRET_ACCESS_KEY else 0,
+            'bucket_name': settings.AWS_STORAGE_BUCKET_NAME,
+            'endpoint_url': settings.AWS_S3_ENDPOINT_URL,
+            'custom_domain': settings.AWS_S3_CUSTOM_DOMAIN,
+        },
+        'storage_backend': str(default_storage.__class__),
+    }
+    
+    try:
+        # Test direct boto3 connection
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        )
+        
+        # Test 1: List buckets
+        buckets = s3.list_buckets()
+        debug_info['buckets'] = [b['Name'] for b in buckets['Buckets']]
+        
+        # Test 2: Check if our bucket exists
+        debug_info['bucket_exists'] = settings.AWS_STORAGE_BUCKET_NAME in debug_info['buckets']
+        
+        # Test 3: Try to list objects in our bucket
+        try:
+            objects = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME, MaxKeys=5)
+            debug_info['object_count'] = objects.get('KeyCount', 0)
+            debug_info['objects'] = [obj['Key'] for obj in objects.get('Contents', [])]
+        except Exception as e:
+            debug_info['list_objects_error'] = str(e)
+            
+        # Test 4: Try a simple upload
+        try:
+            test_key = f"debug_test_{request.user.id}.txt"
+            s3.put_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Key=test_key,
+                Body=b"Debug test content",
+                ContentType='text/plain'
+            )
+            debug_info['upload_test'] = 'Success'
+            
+            # Try to read it back
+            try:
+                obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=test_key)
+                debug_info['read_test'] = 'Success'
+            except Exception as e:
+                debug_info['read_test'] = f'Failed: {e}'
+                
+            # Clean up
+            s3.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=test_key)
+            debug_info['delete_test'] = 'Success'
+            
+        except Exception as e:
+            debug_info['upload_test'] = f'Failed: {e}'
+            
+    except Exception as e:
+        debug_info['connection_error'] = str(e)
+    
+    return JsonResponse(debug_info)
+
+
+@login_required
+def debug_current_profile_picture(request):
+    """Debug the current profile picture setup"""
+    from django.core.files.storage import default_storage
+    from django.http import JsonResponse
+    
+    debug_info = {
+        'current_profile_picture': str(request.user.profile.profile_picture),
+        'profile_picture_type': type(request.user.profile.profile_picture).__name__,
+    }
+    
+    if request.user.profile.profile_picture:
+        try:
+            # Check if file exists in storage
+            exists = default_storage.exists(str(request.user.profile.profile_picture))
+            debug_info['file_exists'] = exists
+            
+            # Try to get URL
+            try:
+                url = default_storage.url(str(request.user.profile.profile_picture))
+                debug_info['file_url'] = url
+                debug_info['url_success'] = True
+            except Exception as e:
+                debug_info['url_error'] = str(e)
+                debug_info['url_success'] = False
+                
+        except Exception as e:
+            debug_info['storage_error'] = str(e)
+    
+    return JsonResponse(debug_info)
+
+
+@login_required
+def debug_storage_config(request):
+    """Debug storage configuration"""
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+    from django.http import JsonResponse
+    
+    config_info = {
+        'storage_backend': getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set'),
+        'aws_access_key_id': getattr(settings, 'AWS_ACCESS_KEY_ID', 'Not set'),
+        'aws_secret_access_key_set': bool(getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)),
+        'aws_storage_bucket_name': getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'Not set'),
+        'aws_s3_endpoint_url': getattr(settings, 'AWS_S3_ENDPOINT_URL', 'Not set'),
+        'aws_s3_custom_domain': getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', 'Not set'),
+        'actual_storage_class': str(default_storage.__class__),
+        'storage_module': str(default_storage.__class__.__module__),
+    }
+    
+    # Check if we can access storage attributes
+    try:
+        config_info['bucket_name'] = default_storage.bucket_name
+    except Exception as e:
+        config_info['bucket_name_error'] = str(e)
+    
+    try:
+        config_info['endpoint_url'] = default_storage.endpoint_url
+    except Exception as e:
+        config_info['endpoint_url_error'] = str(e)
+    
+    # Test actual file operations
+    try:
+        test_content = b"config_test"
+        test_path = f"config_test_{request.user.id}.txt"
+        
+        # Save
+        saved_path = default_storage.save(test_path, ContentFile(test_content))
+        config_info['test_save_path'] = saved_path
+        
+        # Check where it was saved
+        if hasattr(default_storage, 'location'):
+            config_info['storage_location'] = default_storage.location
+        if hasattr(default_storage, 'base_location'):
+            config_info['base_location'] = default_storage.base_location
+            
+        # Check if it's a local path (indicating wrong storage backend)
+        if saved_path.startswith('/') or 'media' in saved_path:
+            config_info['storage_type'] = 'LOCAL_FILESYSTEM'
+        else:
+            config_info['storage_type'] = 'REMOTE_STORAGE'
+            
+        # Clean up
+        default_storage.delete(saved_path)
+        
+    except Exception as e:
+        config_info['test_error'] = str(e)
+    
+    return JsonResponse(config_info) 
+
+
+@login_required
+def test_direct_supabase_connection(request):
+    """Test direct connection to Supabase storage"""
+    import boto3
+    from django.conf import settings
+    from django.http import JsonResponse
+    
+    try:
+        # Create S3 client with your settings
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        )
+        
+        # Test 1: List buckets
+        buckets = s3.list_buckets()
+        bucket_names = [b['Name'] for b in buckets['Buckets']]
+        
+        # Test 2: Check if our bucket exists
+        bucket_exists = settings.AWS_STORAGE_BUCKET_NAME in bucket_names
+        
+        # Test 3: Try to upload a file
+        test_key = f"direct_test_{request.user.id}.txt"
+        s3.put_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=test_key,
+            Body=b"Direct connection test",
+            ContentType='text/plain'
+        )
+        
+        # Test 4: List objects to verify upload
+        objects = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+        uploaded_objects = [obj['Key'] for obj in objects.get('Contents', [])]
+        
+        # Test 5: Delete the test file
+        s3.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=test_key)
+        
+        return JsonResponse({
+            'success': True,
+            'buckets': bucket_names,
+            'target_bucket_exists': bucket_exists,
+            'uploaded_objects': uploaded_objects,
+            'test_file_uploaded': test_key in uploaded_objects,
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'error_type': type(e).__name__
+        })
+        
+@login_required
+def debug_upload_flow(request):
+    """Debug the complete upload flow"""
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from django.http import JsonResponse
+    import os
+    
+    debug_info = {
+        'storage_backend': str(default_storage.__class__),
+        'storage_module': default_storage.__class__.__module__,
+    }
+    
+    # Test 1: Check storage backend attributes
+    try:
+        debug_info['bucket_name'] = getattr(default_storage, 'bucket_name', 'Not found')
+        debug_info['endpoint_url'] = getattr(default_storage, 'endpoint_url', 'Not found')
+        debug_info['access_key'] = getattr(default_storage, 'access_key', 'Not found')
+        debug_info['secret_key_set'] = bool(getattr(default_storage, 'secret_key', None))
+    except Exception as e:
+        debug_info['attribute_error'] = str(e)
+    
+    # Test 2: Perform actual file operation and see where it goes
+    try:
+        test_filename = f"debug_upload_test_{request.user.id}.txt"
+        test_content = b"This is a test upload to see where files go"
+        
+        print(f"🧪 DEBUG: Attempting to save {test_filename}")
+        
+        # Save file
+        saved_path = default_storage.save(test_filename, ContentFile(test_content))
+        debug_info['saved_path'] = saved_path
+        print(f"✅ DEBUG: File saved as: {saved_path}")
+        
+        # Check if it's a local filesystem path
+        if hasattr(default_storage, 'location'):
+            storage_location = default_storage.location
+            debug_info['storage_location'] = storage_location
+            
+            # Check if file exists locally
+            local_path = os.path.join(storage_location, saved_path) if storage_location else saved_path
+            debug_info['local_path'] = local_path
+            debug_info['local_exists'] = os.path.exists(local_path)
+            print(f"🔍 DEBUG: Local path: {local_path}, Exists: {debug_info['local_exists']}")
+        
+        # Check if file exists in storage
+        debug_info['storage_exists'] = default_storage.exists(saved_path)
+        print(f"🔍 DEBUG: Storage exists: {debug_info['storage_exists']}")
+        
+        # Try to get URL
+        try:
+            url = default_storage.url(saved_path)
+            debug_info['generated_url'] = url
+            print(f"🌐 DEBUG: Generated URL: {url}")
+        except Exception as e:
+            debug_info['url_error'] = str(e)
+            print(f"❌ DEBUG: URL error: {e}")
+        
+        # Clean up
+        try:
+            default_storage.delete(saved_path)
+            debug_info['cleanup_success'] = True
+        except Exception as e:
+            debug_info['cleanup_error'] = str(e)
+            
+    except Exception as e:
+        debug_info['upload_test_error'] = str(e)
+        print(f"❌ DEBUG: Upload test failed: {e}")
+    
+    return JsonResponse(debug_info)
+
+@login_required
+def check_current_storage(request):
+    """Check which storage backend is actually being used"""
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+    from django.http import JsonResponse
+    
+    config = {
+        'DEFAULT_FILE_STORAGE': getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set'),
+        'actual_storage_class': str(default_storage.__class__),
+        'STORAGES_default': getattr(settings, 'STORAGES', {}).get('default', {}).get('BACKEND', 'Not set'),
+    }
+    
+    # Check if we're using local storage instead of S3
+    if 'FileSystemStorage' in str(default_storage.__class__):
+        config['storage_type'] = 'LOCAL_FILESYSTEM'
+        if hasattr(default_storage, 'location'):
+            config['local_media_root'] = default_storage.location
+    else:
+        config['storage_type'] = 'REMOTE_STORAGE'
+    
+    return JsonResponse(config)
 
 @login_required
 def technician_dashboard_view(request):
@@ -314,8 +724,51 @@ def redirect_to_correct_dashboard(user):
 @login_required
 def user_profile_view(request):
     """
-    Display user profile page
+    Display user profile page with picture upload using Supabase storage
     """
+    if request.method == 'POST' and 'profile_picture' in request.FILES:
+        # Handle profile picture upload
+        uploaded_file = request.FILES['profile_picture']
+        
+        # Validate file size
+        if uploaded_file.size > 5 * 1024 * 1024:
+            messages.error(request, 'Image file too large ( > 5MB )')
+            return redirect('user_profile')
+        
+        # Validate file type
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
+        file_name = uploaded_file.name.lower()
+        file_extension = '.' + file_name.split('.')[-1] if '.' in file_name else ''
+        
+        if file_extension not in valid_extensions:
+            messages.error(request, 'Please upload a valid image file (JPG, PNG, GIF, BMP)')
+            return redirect('user_profile')
+        
+        try:
+            import uuid
+            
+            # Generate unique filename
+            unique_filename = f"{uuid.uuid4()}{file_extension}"
+            
+            # The file will automatically upload to Supabase storage
+            # due to our DEFAULT_FILE_STORAGE configuration
+            request.user.profile.profile_picture = unique_filename
+            request.user.profile.save()
+            
+            print(f"✅ Profile picture saved to Supabase: {unique_filename}")
+            messages.success(request, 'Your profile picture has been updated successfully!')
+            
+        except Exception as e:
+            print(f"❌ Error saving profile picture: {e}")
+            messages.error(request, 'Error updating profile picture. Please try again.')
+            
+            print(f"✅ Profile picture filename: {request.user.profile.profile_picture}")
+            print(f"✅ Profile picture URL: {request.user.profile.profile_picture.url}")
+            print(f"✅ Full image URL: https://{request.user.profile.profile_picture.url}")
+        
+        return redirect('user_profile')
+    
+    # Normal GET request
     user = request.user
     context = {
         'user': user,
@@ -323,6 +776,7 @@ def user_profile_view(request):
         'title': 'User Profile - FixIT'
     }
     return render(request, 'dashboard/user_profile.html', context)
+
 
 @login_required
 def technician_profile_view(request):
@@ -401,3 +855,214 @@ def change_password_settings(request):
     # GET request - show the form
     return render(request, 'accounts/change_password.html')
 
+@login_required
+def user_messages_view(request):
+    """
+    Display user messages page with chats and messaging functionality
+    """
+    user = request.user
+    
+    # Get all technicians for adding as contacts
+    technicians = UserProfile.objects.filter(is_technician=True).exclude(user=user)
+    
+    # Get user's contacts
+    user_contacts = Contact.objects.filter(user=user)
+    
+    # Get user's bot chats
+    user_bot_chats = []
+    try:
+        user_bot_chats = BotChat.objects.filter(user=user)
+    except Exception as e:
+        print(f"BotChat not available: {e}")
+        # If BotChat doesn't exist, we'll work with contacts only
+    
+    # Combine both types of chats
+    user_chats = []
+    for contact in user_contacts:
+        contact.is_bot = False
+        user_chats.append(contact)
+    for bot_chat in user_bot_chats:
+        bot_chat.is_bot = True
+        bot_chat.contact_name = "FixIT Assistant"
+        user_chats.append(bot_chat)
+    
+    # Get selected chat for messaging
+    selected_chat_id = request.GET.get('chat')
+    selected_chat = None
+    chat_messages = []
+    
+    if selected_chat_id:
+        try:
+            # Check if it's a bot chat or contact chat
+            if selected_chat_id.startswith('bot_'):
+                bot_chat_id = selected_chat_id.replace('bot_', '')
+                selected_chat = BotChat.objects.get(id=bot_chat_id, user=user)
+                selected_chat.is_bot = True
+                selected_chat.contact_name = "FixIT Assistant"
+                chat_messages = BotMessage.objects.filter(chat=selected_chat).order_by('timestamp')
+            else:
+                selected_chat = Contact.objects.get(id=selected_chat_id, user=user)
+                selected_chat.is_bot = False
+                chat_messages = Message.objects.filter(
+                    Q(sender=user, receiver=selected_chat.contact_user) |
+                    Q(sender=selected_chat.contact_user, receiver=user)
+                ).order_by('timestamp')
+        except Exception as e:
+            print(f"Error loading chat: {e}")
+            selected_chat = None
+    
+    # Handle POST requests
+    if request.method == 'POST':
+        # Handle starting new bot chat
+        if 'start_bot_chat' in request.POST:
+            try:
+                # Create new bot chat
+                bot_chat = BotChat.objects.create(user=user)
+                
+                # Add welcome message from bot
+                BotMessage.objects.create(
+                    chat=bot_chat,
+                    sender=None,
+                    content="Hello! I'm FixIT Assistant 👋 I'm here to help you with common issues and FAQs. How can I assist you today?",
+                    is_bot=True
+                )
+                
+                return JsonResponse({
+                    'success': True, 
+                    'chat_id': f'bot_{bot_chat.id}',
+                    'redirect_url': f'{request.path}?chat=bot_{bot_chat.id}'
+                })
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': str(e)})
+        
+        # Handle sending new message
+        elif 'send_message' in request.POST:
+            chat_id = request.POST.get('chat_id')
+            message_content = request.POST.get('message_content', '').strip()
+            
+            print(f"DEBUG: Sending message to chat_id: {chat_id}, content: {message_content}")
+            
+            if chat_id and message_content:
+                if chat_id.startswith('bot_'):
+                    # Handle bot message
+                    bot_chat_id = chat_id.replace('bot_', '')
+                    try:
+                        bot_chat = BotChat.objects.get(id=bot_chat_id, user=user)
+                        
+                        # Save user message
+                        user_message = BotMessage.objects.create(
+                            chat=bot_chat,
+                            sender=user,
+                            content=message_content,
+                            is_bot=False
+                        )
+                        print(f"DEBUG: Saved user message: {user_message.id}")
+                        
+                        # Generate and save bot response
+                        bot_response = generate_bot_response(message_content)
+                        bot_message = BotMessage.objects.create(
+                            chat=bot_chat,
+                            sender=None,
+                            content=bot_response,
+                            is_bot=True
+                        )
+                        print(f"DEBUG: Saved bot response: {bot_message.id}")
+                        
+                        messages.success(request, 'Message sent!')
+                        return redirect(f'{request.path}?chat={chat_id}')
+                        
+                    except BotChat.DoesNotExist:
+                        print(f"DEBUG: BotChat not found for id: {bot_chat_id}")
+                        messages.error(request, 'Chat session not found. Please start a new chat.')
+                    except Exception as e:
+                        print(f"DEBUG: Error in bot message: {e}")
+                        messages.error(request, 'Error sending message to assistant.')
+                else:
+                    # Handle regular message to technician
+                    try:
+                        contact = Contact.objects.get(id=chat_id, user=user)
+                        Message.objects.create(
+                            sender=user,
+                            receiver=contact.contact_user,
+                            content=message_content,
+                            timestamp=timezone.now()
+                        )
+                        messages.success(request, 'Message sent successfully!')
+                        return redirect(f'{request.path}?chat={chat_id}')
+                    except Contact.DoesNotExist:
+                        print(f"DEBUG: Contact not found for id: {chat_id}")
+                        messages.error(request, 'Contact not found.')
+            else:
+                messages.error(request, 'Message cannot be empty.')
+    
+    context = {
+        'user': user,
+        'profile': user.profile,
+        'title': 'Messages - FixIT',
+        'technicians': technicians,
+        'user_chats': user_chats,
+        'selected_chat': selected_chat,
+        'chat_messages': chat_messages,
+    }
+    return render(request, 'dashboard/user_message.html', context)
+
+def generate_bot_response(message):
+    """
+    Generate automated responses for the bot chat
+    """
+    message_lower = message.lower()
+    
+    responses = {
+        # Network Issues
+        'internet not showing in network options': "🌐 **Internet Not Showing in Network Options**\n\n**Troubleshooting Steps:**\n\n1. **Check Physical Connections**\n   • Ensure Ethernet cable is securely connected\n   • Restart your router/modem\n   • Check if other devices can connect\n\n2. **Network Adapter Issues**\n   • Go to Device Manager → Network Adapters\n   • Right-click your adapter → 'Update driver'\n   • Or try 'Disable' then 'Enable' the adapter\n\n3. **Network Reset**\n   • Windows: Settings → Network & Internet → Network Reset\n   • This will reinstall network adapters\n\n4. **Quick Fixes**\n   • Run Windows Network Diagnostics\n   • Command Prompt: `ipconfig /release` then `ipconfig /renew`\n   • Temporarily disable VPN/antivirus\n\nIf none work, you may need to contact your ISP or create a support ticket for further assistance.",
+        
+        'wifi keeps disconnecting': "📶 **WiFi Connection Drops**\n\n**Common Solutions:**\n\n1. **Router Position**\n   • Move closer to the router\n   • Avoid physical obstructions\n   • Keep away from microwave ovens/cordless phones\n\n2. **Router Settings**\n   • Restart your router\n   • Update router firmware\n   • Change WiFi channel (1, 6, or 11)\n\n3. **Device Settings**\n   • Update wireless adapter drivers\n   • Disable 'Allow computer to turn off this device to save power'\n   • Forget network and reconnect\n\n4. **Advanced Fixes**\n   • Change WiFi band (2.4GHz vs 5GHz)\n   • Check for interference from other networks\n   • Consider WiFi extender if signal is weak",
+        
+        'slow internet speed': "🐢 **Slow Internet Speed**\n\n**Speed Improvement Steps:**\n\n1. **Immediate Actions**\n   • Restart router and modem\n   • Close bandwidth-heavy applications\n   • Run speed test (speedtest.net)\n\n2. **Device Optimization**\n   • Clear browser cache and cookies\n   • Update network drivers\n   • Scan for malware/viruses\n\n3. **Network Management**\n   • Limit devices connected to WiFi\n   • Use Ethernet cable for critical devices\n   • Check for background updates\n\n4. **Contact ISP**\n   • Verify your internet plan speed\n   • Check for outages in your area\n   • Request line quality check",
+        
+        # Device Problems
+        'computer running very slow': "🖥️ **Slow Computer Performance**\n\n**Performance Boost Steps:**\n\n1. **Quick Cleanup**\n   • Restart your computer\n   • Close unused applications\n   • Clear temporary files\n\n2. **Startup Management**\n   • Task Manager → Startup tab\n   • Disable unnecessary startup programs\n   • This speeds up boot time\n\n3. **Storage Optimization**\n   • Ensure 15%+ free space on C: drive\n   • Run Disk Cleanup utility\n   • Uninstall unused programs\n\n4. **System Maintenance**\n   • Run antivirus scan\n   • Update Windows and drivers\n   • Consider adding more RAM if consistently slow",
+        
+        'printer not working': "🖨️ **Printer Troubleshooting**\n\n**Fix Printing Issues:**\n\n1. **Basic Checks**\n   • Ensure printer is powered on\n   • Check paper and ink levels\n   • Verify cables are connected\n\n2. **Connection Issues**\n   • Restart printer and computer\n   • Reinstall printer drivers\n   • Set as default printer\n\n3. **Software Solutions**\n   • Run Printer Troubleshooter\n   • Clear print queue\n   • Check printer status in Devices\n\n4. **Network Printing**\n   • For network printers, verify IP address\n   • Check if other computers can print\n   • Re-add network printer if needed",
+        
+        # Add more responses for other common issues...
+    }
+    
+    # Check for exact matches first
+    for keyword, response in responses.items():
+        if keyword in message_lower:
+            return response
+    
+    # Check for partial matches
+    partial_responses = {
+        'internet': "🌐 **Internet Connection Issues**\n\nI can help with various internet problems:\n• No internet connection\n• WiFi dropping\n• Slow speeds\n• Network not showing\n\nPlease describe your specific issue, or use the 'Common Issues' dropdown for targeted help!",
+        
+        'wifi': "📶 **WiFi Problems**\n\nCommon WiFi solutions:\n• Move closer to router\n• Restart router and device\n• Update network drivers\n• Change WiFi channel\n\nWhat specific WiFi issue are you experiencing?",
+        
+        'slow': "🐢 **Performance Issues**\n\nFor slow performance, try:\n• Restart your device\n• Close unused programs\n• Clear cache and temp files\n• Check for updates\n\nIs it internet speed or computer performance that's slow?",
+        
+        'printer': "🖨️ **Printer Help**\n\nPrinter troubleshooting:\n• Check power and connections\n• Verify ink/paper levels\n• Reinstall drivers\n• Clear print queue\n\nWhat's happening with your printer exactly?",
+        
+        'password': "🔐 **Password Assistance**\n\nFor password issues:\n• Use 'Forgot Password' on login page\n• Check your email for reset link\n• Ensure caps lock is off\n• Try different browser\n\nAre you unable to reset your password or having login problems?",
+        
+        'login': "🔑 **Login Problems**\n\nLogin issue solutions:\n• Verify username/password\n• Check caps lock\n• Clear browser cache\n• Try incognito mode\n\nWhat happens when you try to login?",
+        
+        'email': "📧 **Email Issues**\n\nEmail troubleshooting:\n• Check internet connection\n• Verify email credentials\n• Clear email app cache\n• Check spam folder\n\nAre you having trouble sending, receiving, or accessing email?",
+    }
+    
+    for keyword, response in partial_responses.items():
+        if keyword in message_lower:
+            return response
+    
+    # Default responses for greetings
+    if any(word in message_lower for word in ['hello', 'hi', 'hey', 'greetings']):
+        return "Hello! 👋 I'm FixIT Assistant! I can help you with:\n\n• 🌐 Network & Internet issues\n• 💻 Computer performance problems\n• 🖨️ Printer and peripheral issues\n• 📱 Software and application errors\n• 🔐 Login and account access\n• 📧 Email and communication problems\n\nWhat can I help you with today? You can also use the 'Common Issues' dropdown for quick solutions!"
+    
+    elif any(word in message_lower for word in ['thank', 'thanks']):
+        return "You're welcome! 😊 I'm glad I could help. Is there anything else you need assistance with today?"
+    
+    elif any(word in message_lower for word in ['bye', 'goodbye', 'see you']):
+        return "Goodbye! 👋 Don't hesitate to reach out if you need more help. Have a great day!"
+    
+    # Default response for unrecognized messages
+    return "🤔 **I'm here to help!**\n\nI understand you're asking about: *'" + message + "'*\n\nI specialize in:\n• Network and connectivity issues\n• Computer performance problems\n• Software and hardware troubleshooting\n• Account and access problems\n\nCould you provide more specific details about your issue, or use the 'Common Issues' dropdown menu for common problems?"
