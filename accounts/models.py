@@ -189,3 +189,23 @@ class CreateTicket(models.Model):
 
     def __str__(self):
         return f"Ticket {self.id}: {self.title}"
+
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications', null=True, blank=True)
+    ticket = models.ForeignKey('CreateTicket', on_delete=models.CASCADE, null=True, blank=True)
+    message = models.TextField()  # e.g., "Technician replied to your ticket"
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification to {self.recipient.username}: {self.message}"
+
+

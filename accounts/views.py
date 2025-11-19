@@ -41,19 +41,22 @@ def signup_view(request):
     # If user is already logged in, redirect to dashboard
     if request.user.is_authenticated:
         return redirect_to_correct_dashboard(request.user)
-    
+
     # Get user_type from query parameters
     user_type = request.GET.get('user_type', 'user')
-    
+
     if request.method == 'POST':
         form = UserSignUpForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            # Set user type based on selection
+            user.save()  # Save the user first
+
+            # Create or update the UserProfile
+            profile, created = UserProfile.objects.get_or_create(user=user)
             if user_type == 'technician':
-                user.is_technician = True
-            user.save()
-            
+                profile.is_technician = True
+            profile.save()
+
             # Log the user in after successful registration
             login(request, user)
             messages.success(request, f'Welcome {user.username}! Your account has been created successfully.')
@@ -62,7 +65,7 @@ def signup_view(request):
             messages.error(request, 'Please correct the errors below.')
     else:
         form = UserSignUpForm(initial={'user_type': user_type})
-    
+
     context = {
         'form': form,
         'title': 'Sign Up - FixIT',
@@ -716,16 +719,13 @@ def change_password_view(request):
     # GET request - show the form
     return render(request, 'accounts/change_password.html')
 
-
-# Helper function to redirect users to correct dashboard
 def redirect_to_correct_dashboard(user):
-    """
-    Redirect user to appropriate dashboard based on their role
-    """
-    if hasattr(user, 'profile') and user.profile.is_technician:
+    if getattr(user, 'is_technician', False):  # checks user.is_technician
         return redirect('technician_dashboard')
     else:
         return redirect('user_dashboard')
+
+
     
     
 @login_required
@@ -1119,4 +1119,19 @@ def available_technicians(request):
     ]
 
     return render(request, 'accounts/available_technicians.html', {'technicians': technicians})
+
+
+from .utils import create_notification
+
+def respond_ticket(request, ticket_id):
+    ticket = CreateTicket.objects.get(id=ticket_id)
+    helper = request.user
+    response_message = request.POST.get('response')  # Or however you get the response
+
+    # Save response to your TicketResponse model or update ticket
+
+    # Create notification for the ticket owner
+    create_notification(ticket, helper, f"{helper.username} responded: {response_message}")
+
+    return redirect('ticket_detail', ticket_id=ticket.id)
 
