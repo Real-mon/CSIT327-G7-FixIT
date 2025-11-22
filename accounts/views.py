@@ -33,46 +33,45 @@ def role_select_view(request):
     }
     return render(request, 'accounts/role_select.html', context)
 
+#FIXING
+from django.contrib.auth import login
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from .forms import UserSignUpForm
+from .models import UserProfile
 
 def signup_view(request):
     """
-    Handle user registration
+    Handle user registration with role selection (User or Technician)
     """
-    # If user is already logged in, redirect to dashboard
     if request.user.is_authenticated:
         return redirect_to_correct_dashboard(request.user)
-
-    # Get user_type from query parameters
-    user_type = request.GET.get('user_type', 'user')
 
     if request.method == 'POST':
         form = UserSignUpForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.save()  # Save the user first
+            user = form.save()  # password is already hashed by UserCreationForm
 
-            # Create or update the UserProfile
-            profile, created = UserProfile.objects.get_or_create(user=user)
-            if user_type == 'technician':
-                profile.is_technician = True
-            profile.save()
-
-            # Log the user in after successful registration
+            # Log the user in
             login(request, user)
             messages.success(request, f'Welcome {user.username}! Your account has been created successfully.')
+
+            # Redirect based on role
             return redirect_to_correct_dashboard(user)
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
+        # Get user_type from query params to prefill hidden input
+        user_type = request.GET.get('user_type', 'user')
         form = UserSignUpForm(initial={'user_type': user_type})
 
     context = {
         'form': form,
         'title': 'Sign Up - FixIT',
-        'user_type': user_type,
         'hide_navigation': True
     }
     return render(request, 'accounts/signup.html', context)
+
 
 
 def login_view(request):
@@ -82,7 +81,7 @@ def login_view(request):
     # If user is already logged in, redirect to dashboard
     if request.user.is_authenticated:
         return redirect_to_correct_dashboard(request.user)
-    
+
     if request.method == 'POST':
         form = UserLoginForm(request, data=request.POST)
         if form.is_valid():
@@ -98,7 +97,7 @@ def login_view(request):
             messages.error(request, 'Invalid username or password.')
     else:
         form = UserLoginForm()
-    
+
     context = {
         'form': form,
         'title': 'Login - FixIT',
@@ -719,11 +718,15 @@ def change_password_view(request):
     # GET request - show the form
     return render(request, 'accounts/change_password.html')
 
+#test
+from django.shortcuts import redirect
 def redirect_to_correct_dashboard(user):
-    if getattr(user, 'is_technician', False):  # checks user.is_technician
+    if hasattr(user, 'profile') and user.profile.is_technician:
         return redirect('technician_dashboard')
-    else:
-        return redirect('user_dashboard')
+    return redirect('user_dashboard')
+
+
+
 
 
     
