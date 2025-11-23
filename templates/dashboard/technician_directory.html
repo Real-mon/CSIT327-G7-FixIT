@@ -65,354 +65,206 @@
             <!-- Header -->
             <div class="mb-8">
                 <h1 class="text-3xl font-bold text-[#0245a3] mb-2">Technician Directory</h1>
-                <p class="text-[#0245a3]">Find the right technician for your needs</p>
+                <p class="text-[#0245a3]">Find the right technician for your needs from our certified professionals</p>
             </div>
 
             <!-- Search and Filter Section -->
             <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-[#8fbaf3]/40 p-6 mb-8">
-                <div class="flex flex-col md:flex-row gap-4">
+                <form method="GET" action="{% url 'technician_directory' %}" class="flex flex-col md:flex-row gap-4">
                     <!-- Search -->
                     <div class="flex-1">
                         <div class="relative">
-                            <input type="text" placeholder="Search technicians by name or specialty..." 
+                            <input type="text" 
+                                   name="search" 
+                                   placeholder="Search technicians by name, specialty, or bio..." 
+                                   value="{{ search_query }}"
                                    class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] placeholder-[#0245a3]/60 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
                             <i class="fas fa-search absolute right-3 top-3 text-[#0245a3]"></i>
                         </div>
                     </div>
                     
                     <!-- Filter by Service -->
-                    <div class="md:w-64">
-                        <select class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
-                            <option value="">All Services</option>
-                            <option value="hardware">Hardware Repair</option>
-                            <option value="software">Software Support</option>
-                            <option value="network">Network Issues</option>
-                            <option value="mobile">Mobile Devices</option>
-                            <option value="data">Data Recovery</option>
+                    <div class="md:w-48">
+                        <select name="service" class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                            <option value="">All Specialties</option>
+                            {% for specialty in all_specialties %}
+                            <option value="{{ specialty.name }}" {% if selected_service == specialty.name %}selected{% endif %}>
+                                {{ specialty.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Filter by Availability -->
+                    <div class="md:w-40">
+                        <select name="availability" class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                            <option value="">All Status</option>
+                            <option value="available" {% if selected_availability == 'available' %}selected{% endif %}>Available</option>
+                            <option value="busy" {% if selected_availability == 'busy' %}selected{% endif %}>Busy</option>
                         </select>
                     </div>
                     
                     <!-- Sort Options -->
                     <div class="md:w-48">
-                        <select class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
-                            <option value="rating">Highest Rated</option>
-                            <option value="name">Name A-Z</option>
-                            <option value="availability">Availability</option>
+                        <select name="sort" class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                            <option value="rating" {% if selected_sort == 'rating' %}selected{% endif %}>Highest Rated</option>
+                            <option value="name" {% if selected_sort == 'name' %}selected{% endif %}>Name A-Z</option>
+                            <option value="experience" {% if selected_sort == 'experience' %}selected{% endif %}>Most Experienced</option>
+                            <option value="response_time" {% if selected_sort == 'response_time' %}selected{% endif %}>Fastest Response</option>
                         </select>
                     </div>
+                    
+                    <!-- Submit Button -->
+                    <button type="submit" class="md:w-auto bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl px-6 py-3 hover:opacity-90 transition">
+                        Apply Filters
+                    </button>
+                </form>
+            </div>
+
+            <!-- Statistics Bar -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white/20 backdrop-blur-lg rounded-xl border border-[#8fbaf3]/40 p-4 text-center">
+                    <div class="text-2xl font-bold text-[#0245a3]">{{ technicians|length }}</div>
+                    <div class="text-sm text-[#0245a3]">Total Technicians</div>
+                </div>
+                <div class="bg-white/20 backdrop-blur-lg rounded-xl border border-[#8fbaf3]/40 p-4 text-center">
+                    <div class="text-2xl font-bold text-[#0245a3]">
+                        {{ technicians|length|default:0 }}
+                    </div>
+                    <div class="text-sm text-[#0245a3]">Available Now</div>
+                </div>
+                <div class="bg-white/20 backdrop-blur-lg rounded-xl border border-[#8fbaf3]/40 p-4 text-center">
+                    <div class="text-2xl font-bold text-[#0245a3]">
+                        {% if technicians %}{{ technicians.0.rating|floatformat:1 }}{% else %}4.5{% endif %}+
+                    </div>
+                    <div class="text-sm text-[#0245a3]">Average Rating</div>
+                </div>
+                <div class="bg-white/20 backdrop-blur-lg rounded-xl border border-[#8fbaf3]/40 p-4 text-center">
+                    <div class="text-2xl font-bold text-[#0245a3]">{{ all_specialties|length }}+</div>
+                    <div class="text-sm text-[#0245a3]">Specialties</div>
                 </div>
             </div>
 
             <!-- Technician Cards Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Technician 1 -->
-                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-[#8fbaf3]/40 p-6">
+                {% for tech in technicians %}
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-[#8fbaf3]/40 p-6 hover:shadow-lg transition-all duration-300">
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                JS
+                            {% if tech.profile_picture_url %}
+                            <img src="{{ tech.profile_picture_url }}" alt="{{ tech.first_name }} {{ tech.last_name }}" 
+                                 class="w-16 h-16 rounded-full object-cover border-2 border-[#8fbaf3]">
+                            {% else %}
+                            <div class="w-16 h-16 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-lg border-2 border-[#8fbaf3]">
+                                {{ tech.initials }}
                             </div>
+                            {% endif %}
                             <div>
-                                <h3 class="font-bold text-[#0245a3] text-lg">John Smith</h3>
+                                <h3 class="font-bold text-[#0245a3] text-lg">
+                                    {{ tech.first_name|default:tech.username }} {{ tech.last_name|default:"" }}
+                                </h3>
                                 <div class="flex items-center mt-1">
                                     <div class="flex text-yellow-400">
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star-half-alt"></i>
+                                        {% with ''|center:5 as range %}
+                                        {% for i in range %}
+                                            {% if forloop.counter <= tech.rating|add:"0" %}
+                                                <i class="fas fa-star text-sm"></i>
+                                            {% elif forloop.counter <= tech.rating|add:"0.5" %}
+                                                <i class="fas fa-star-half-alt text-sm"></i>
+                                            {% else %}
+                                                <i class="far fa-star text-sm"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% endwith %}
                                     </div>
-                                    <span class="ml-2 text-[#0245a3] text-sm">4.5 (128)</span>
+                                    <span class="ml-2 text-[#0245a3] text-sm">{{ tech.rating|floatformat:1 }} ({{ tech.review_count }})</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
-                            Available
+                        <div class="{{ tech.availability_class }} text-xs font-semibold px-2 py-1 rounded-full">
+                            {{ tech.availability_status }}
                         </div>
                     </div>
+                    
+                    <!-- Bio -->
+                    {% if tech.bio %}
+                    <div class="mb-4">
+                        <p class="text-[#0245a3] text-sm line-clamp-2">{{ tech.bio|truncatewords:20 }}</p>
+                    </div>
+                    {% endif %}
                     
                     <div class="mb-4">
                         <h4 class="text-[#0245a3] font-semibold mb-2">Specialties</h4>
                         <div class="flex flex-wrap gap-2">
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Hardware Repair</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Laptops</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Data Recovery</span>
+                            {% for specialty in tech.specialties %}
+                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">{{ specialty }}</span>
+                            {% empty %}
+                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">General IT Support</span>
+                            {% endfor %}
                         </div>
                     </div>
                     
-                    <div class="flex justify-between items-center text-sm text-[#0245a3] mb-4">
-                        <div class="flex items-center">
-                            <i class="fas fa-briefcase mr-1"></i>
-                            <span>5 years experience</span>
+                    <!-- Additional Info -->
+                    <div class="space-y-2 text-sm text-[#0245a3] mb-4">
+                        <div class="flex justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-briefcase mr-2"></i>
+                                <span>{{ tech.experience_years }} year{{ tech.experience_years|pluralize }} exp.</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-clock mr-2"></i>
+                                <span>{{ tech.response_time }}h avg.</span>
+                            </div>
                         </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-clock mr-1"></i>
-                            <span>Avg. response: 1.2h</span>
+                        <div class="flex justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                <span>{{ tech.completed_tickets }} completed</span>
+                            </div>
+                            {% if tech.hourly_rate %}
+                            <div class="flex items-center">
+                                <i class="fas fa-dollar-sign mr-2"></i>
+                                <span>${{ tech.hourly_rate }}/hr</span>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                     
-                    <button class="w-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl py-3 hover:opacity-90 transition">
-                        Request Assistance
-                    </button>
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-2">
+                        {% if tech.availability_status == "Available" %}
+                        <button class="flex-1 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl py-3 hover:opacity-90 transition request-assistance-btn"
+                                data-technician-id="{{ tech.id }}"
+                                data-technician-name="{{ tech.first_name|default:tech.username }} {{ tech.last_name|default:'' }}">
+                            Request Help
+                        </button>
+                        <a href="{% url 'technician_detail' tech.id %}" class="px-4 bg-white/30 border border-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl py-3 hover:bg-white/40 transition flex items-center justify-center">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        {% else %}
+                        <button class="flex-1 bg-gray-400 text-white font-semibold rounded-xl py-3 cursor-not-allowed" disabled>
+                            Currently Unavailable
+                        </button>
+                        <a href="{% url 'technician_detail' tech.id %}" class="px-4 bg-white/30 border border-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl py-3 hover:bg-white/40 transition flex items-center justify-center">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
-                
-                <!-- Technician 2 -->
-                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-[#8fbaf3]/40 p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                MJ
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-[#0245a3] text-lg">Maria Johnson</h3>
-                                <div class="flex items-center mt-1">
-                                    <div class="flex text-yellow-400">
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                    </div>
-                                    <span class="ml-2 text-[#0245a3] text-sm">5.0 (94)</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
-                            Available
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h4 class="text-[#0245a3] font-semibold mb-2">Specialties</h4>
-                        <div class="flex flex-wrap gap-2">
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Software Support</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">OS Installation</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Virus Removal</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-sm text-[#0245a3] mb-4">
-                        <div class="flex items-center">
-                            <i class="fas fa-briefcase mr-1"></i>
-                            <span>8 years experience</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-clock mr-1"></i>
-                            <span>Avg. response: 0.8h</span>
-                        </div>
-                    </div>
-                    
-                    <button class="w-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl py-3 hover:opacity-90 transition">
-                        Request Assistance
-                    </button>
+                {% empty %}
+                <div class="col-span-full text-center py-12">
+                    <i class="fas fa-user-cog text-6xl text-[#8fbaf3] mb-4"></i>
+                    <h3 class="text-xl font-bold text-[#0245a3] mb-2">No Technicians Found</h3>
+                    <p class="text-[#0245a3] mb-4">Try adjusting your search criteria or check back later.</p>
+                    <a href="{% url 'technician_directory' %}" class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl px-6 py-3 hover:opacity-90 transition">
+                        Clear Filters
+                    </a>
                 </div>
-                
-                <!-- Technician 3 -->
-                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-[#8fbaf3]/40 p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                RW
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-[#0245a3] text-lg">Robert Williams</h3>
-                                <div class="flex items-center mt-1">
-                                    <div class="flex text-yellow-400">
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="far fa-star"></i>
-                                    </div>
-                                    <span class="ml-2 text-[#0245a3] text-sm">4.0 (76)</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded-full">
-                            Busy
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h4 class="text-[#0245a3] font-semibold mb-2">Specialties</h4>
-                        <div class="flex flex-wrap gap-2">
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Network Issues</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Wi-Fi Setup</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Server Maintenance</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-sm text-[#0245a3] mb-4">
-                        <div class="flex items-center">
-                            <i class="fas fa-briefcase mr-1"></i>
-                            <span>6 years experience</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-clock mr-1"></i>
-                            <span>Avg. response: 2.1h</span>
-                        </div>
-                    </div>
-                    
-                    <button class="w-full bg-gray-400 text-white font-semibold rounded-xl py-3 cursor-not-allowed" disabled>
-                        Currently Unavailable
-                    </button>
-                </div>
-                
-                <!-- Technician 4 -->
-                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-[#8fbaf3]/40 p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                SG
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-[#0245a3] text-lg">Sarah Garcia</h3>
-                                <div class="flex items-center mt-1">
-                                    <div class="flex text-yellow-400">
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star-half-alt"></i>
-                                    </div>
-                                    <span class="ml-2 text-[#0245a3] text-sm">4.7 (112)</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
-                            Available
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h4 class="text-[#0245a3] font-semibold mb-2">Specialties</h4>
-                        <div class="flex flex-wrap gap-2">
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Mobile Devices</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Tablets</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Screen Replacement</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-sm text-[#0245a3] mb-4">
-                        <div class="flex items-center">
-                            <i class="fas fa-briefcase mr-1"></i>
-                            <span>4 years experience</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-clock mr-1"></i>
-                            <span>Avg. response: 1.5h</span>
-                        </div>
-                    </div>
-                    
-                    <button class="w-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl py-3 hover:opacity-90 transition">
-                        Request Assistance
-                    </button>
-                </div>
-                
-                <!-- Technician 5 -->
-                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-[#8fbaf3]/40 p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                DB
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-[#0245a3] text-lg">David Brown</h3>
-                                <div class="flex items-center mt-1">
-                                    <div class="flex text-yellow-400">
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                    </div>
-                                    <span class="ml-2 text-[#0245a3] text-sm">5.0 (63)</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
-                            Limited
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h4 class="text-[#0245a3] font-semibold mb-2">Specialties</h4>
-                        <div class="flex flex-wrap gap-2">
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Printer Issues</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Peripherals</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Hardware Diagnostics</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-sm text-[#0245a3] mb-4">
-                        <div class="flex items-center">
-                            <i class="fas fa-briefcase mr-1"></i>
-                            <span>7 years experience</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-clock mr-1"></i>
-                            <span>Avg. response: 1.8h</span>
-                        </div>
-                    </div>
-                    
-                    <button class="w-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl py-3 hover:opacity-90 transition">
-                        Request Assistance
-                    </button>
-                </div>
-                
-                <!-- Technician 6 -->
-                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-[#8fbaf3]/40 p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                                LT
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-[#0245a3] text-lg">Lisa Taylor</h3>
-                                <div class="flex items-center mt-1">
-                                    <div class="flex text-yellow-400">
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="fas fa-star"></i>
-                                        <i class="far fa-star"></i>
-                                    </div>
-                                    <span class="ml-2 text-[#0245a3] text-sm">4.2 (87)</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
-                            Available
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h4 class="text-[#0245a3] font-semibold mb-2">Specialties</h4>
-                        <div class="flex flex-wrap gap-2">
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Software Support</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Email Setup</span>
-                            <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">Backup Solutions</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-sm text-[#0245a3] mb-4">
-                        <div class="flex items-center">
-                            <i class="fas fa-briefcase mr-1"></i>
-                            <span>3 years experience</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-clock mr-1"></i>
-                            <span>Avg. response: 1.0h</span>
-                        </div>
-                    </div>
-                    
-                    <button class="w-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl py-3 hover:opacity-90 transition">
-                        Request Assistance
-                    </button>
-                </div>
+                {% endfor %}
             </div>
             
             <!-- Pagination -->
+            {% if technicians %}
             <div class="flex justify-center mt-8">
                 <div class="bg-white/20 backdrop-blur-lg rounded-xl border border-[#8fbaf3]/40 p-2 flex space-x-2">
                     <button class="w-10 h-10 flex items-center justify-center text-[#0245a3] rounded-lg hover:bg-[#8fbaf3]/30 transition">
@@ -426,11 +278,300 @@
                     </button>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
+<!-- Request Assistance Modal
+<div id="assistanceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 relative">
+        <button type="button" class="modal-close absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3 class="text-xl font-bold text-[#0245a3] mb-4">Request Assistance</h3>
+        <form id="assistanceForm">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[#0245a3] text-sm font-medium mb-2">Title</label>
+                    <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]" 
+                           placeholder="Brief description of your issue" required>
+                </div>
+                <div>
+                    <label class="block text-[#0245a3] text-sm font-medium mb-2">Description</label>
+                    <textarea name="description" rows="4" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]" 
+                              placeholder="Detailed description of your problem..." required></textarea>
+                </div>
+                <div>
+                    <label class="block text-[#0245a3] text-sm font-medium mb-2">Priority</label>
+                    <select name="priority" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex space-x-3 mt-6">
+                <button type="button" onclick="closeModal()" class="flex-1 bg-gray-300 text-gray-700 font-semibold rounded-xl py-3 hover:bg-gray-400 transition">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl py-3 hover:opacity-90 transition">
+                    Send Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div> -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Modal system initializing...');
+    
+    // Remove any existing modal completely
+    const existingModal = document.getElementById('assistanceModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Create clean modal HTML
+    const modalHTML = `
+        <div id="assistanceModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;" class="hidden">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 relative" style="z-index: 10001;">
+                <button type="button" id="modalCloseBtn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl font-bold">
+                    ×
+                </button>
+                <h3 class="text-xl font-bold text-[#0245a3] mb-4" id="modalTitle">Request Assistance</h3>
+                <form id="assistanceForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Title</label>
+                            <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]" 
+                                   placeholder="Brief description of your issue" required>
+                        </div>
+                        <div>
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Description</label>
+                            <textarea name="description" rows="4" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]" 
+                                      placeholder="Detailed description of your problem..." required></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Priority</label>
+                            <select name="priority" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3 mt-6">
+                        <button type="button" id="modalCancelBtn" class="flex-1 bg-gray-300 text-gray-700 font-semibold rounded-xl py-3 hover:bg-gray-400 transition">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl py-3 hover:opacity-90 transition">
+                            Send Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Get fresh references
+    const modal = document.getElementById('assistanceModal');
+    const form = document.getElementById('assistanceForm');
+    const closeBtn = document.getElementById('modalCloseBtn');
+    const cancelBtn = document.getElementById('modalCancelBtn');
+    
+    let isModalOpen = false;
+    
+    // Modal control functions
+    function openModal(techName, techId) {
+        console.log('Opening modal for:', techName);
+        
+        // Update title
+        const title = document.getElementById('modalTitle');
+        if (title) {
+            title.textContent = `Request Assistance from ${techName}`;
+        }
+        
+        // Store technician ID
+        if (form) {
+            form.dataset.technicianId = techId;
+        }
+        
+        // Show modal - using both methods for maximum compatibility
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        isModalOpen = true;
+        
+        console.log('Modal opened successfully');
+    }
+    
+    function closeModal() {
+        console.log('Closing modal');
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        if (form) form.reset();
+        isModalOpen = false;
+        
+        // Clear any stored data
+        if (form) {
+            delete form.dataset.technicianId;
+        }
+    }
+    
+    // Make closeModal available globally
+    window.closeModal = closeModal;
+    
+    // Event listeners with proper cleanup
+    function setupEventListeners() {
+        // Close button
+        if (closeBtn) {
+            closeBtn.onclick = closeModal;
+        }
+        
+        // Cancel button
+        if (cancelBtn) {
+            cancelBtn.onclick = closeModal;
+        }
+        
+        // Click outside to close - but only on the backdrop
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        };
+        
+        // Escape key to close
+        document.onkeydown = function(e) {
+            if (e.key === 'Escape' && isModalOpen) {
+                closeModal();
+            }
+        };
+        
+        // Form submission
+        if (form) {
+            form.onsubmit = function(e) {
+                e.preventDefault();
+                
+                const technicianId = this.dataset.technicianId;
+                if (!technicianId) {
+                    alert('No technician selected');
+                    return;
+                }
+                
+                const formData = new FormData(this);
+                const title = formData.get('title').trim();
+                const description = formData.get('description').trim();
+                
+                if (!title || !description) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+                
+                // Get CSRF token
+                function getCSRFToken() {
+                    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                           document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+                }
+                
+                // Submit request
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Sending...';
+                submitBtn.disabled = true;
+                
+                fetch('{% url "request_assistance" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        technician_id: technicianId,
+                        title: title,
+                        description: description,
+                        priority: formData.get('priority')
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Network error');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('Request sent successfully!');
+                        closeModal();
+                    } else {
+                        throw new Error(data.error || 'Request failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error: ' + error.message);
+                })
+                .finally(() => {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                });
+            };
+        }
+        
+        // Request assistance buttons
+        document.querySelectorAll('.request-assistance-btn').forEach(button => {
+            button.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const techId = this.getAttribute('data-technician-id');
+                const techName = this.getAttribute('data-technician-name');
+                
+                if (techId && techName) {
+                    openModal(techName, techId);
+                }
+                
+                return false;
+            };
+        });
+    }
+    
+    // Initialize event listeners
+    setupEventListeners();
+    
+    console.log('Modal system ready');
+});
+</script>
+
 <style>
     .animation-delay-2000 { animation-delay: 2s; }
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    /* Modal styling - minimal and forceful */
+    #assistanceModal {
+        display: none !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.5) !important;
+        z-index: 10000 !important;
+    }
+    
+    #assistanceModal:not(.hidden) {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
 </style>
 {% endblock %}
