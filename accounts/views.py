@@ -37,35 +37,55 @@ def role_select_view(request):
     }
     return render(request, 'accounts/role_select.html', context)
 
-#FIXING
+
+from accounts.forms import UserSignUpForm
+from accounts.models import UserProfile
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import login
+from .forms import UserSignUpForm
+from .models import UserProfile
+
 from django.contrib.auth import login
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from .forms import UserSignUpForm
-from .models import UserProfile
+from .models import UserProfile  # make sure this is imported
+
 
 def signup_view(request):
     """
     Handle user registration with role selection (User or Technician)
     """
+    # Redirect logged-in users
     if request.user.is_authenticated:
         return redirect_to_correct_dashboard(request.user)
 
     if request.method == 'POST':
         form = UserSignUpForm(request.POST)
         if form.is_valid():
-            user = form.save()  # password is already hashed by UserCreationForm
+            # Save user (password already handled by UserCreationForm)
+            user = form.save()
+
+            # Create or get profile
+            profile, created = UserProfile.objects.get_or_create(user=user)
+
+            # Set technician flag from form
+            user_type = form.cleaned_data.get('user_type', 'user')
+            profile.is_technician = (user_type == 'technician')
+            profile.save()
 
             # Log the user in
             login(request, user)
             messages.success(request, f'Welcome {user.username}! Your account has been created successfully.')
 
-            # Redirect based on role
+            # Redirect to the correct dashboard
             return redirect_to_correct_dashboard(user)
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        # Get user_type from query params to prefill hidden input
+        # Prefill hidden user_type from query param
         user_type = request.GET.get('user_type', 'user')
         form = UserSignUpForm(initial={'user_type': user_type})
 
@@ -78,32 +98,42 @@ def signup_view(request):
 
 
 
+
+from django.contrib.auth import authenticate, login
+from django.contrib import messages
+
+
 def login_view(request):
     """
-    Handle user login
+    Handle user login and redirect to correct dashboard
     """
-    # If user is already logged in, redirect to dashboard
     if request.user.is_authenticated:
         return redirect_to_correct_dashboard(request.user)
 
     if request.method == 'POST':
-        form = UserLoginForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                login(request, user)
-                messages.success(request, f'Welcome back, {username}!')
-                # Redirect to correct dashboard based on user type
-                return redirect_to_correct_dashboard(user)
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            messages.success(request, f'Welcome back, {user.username}!')
+
+            # Get or create profile and redirect accordingly
+            profile, created = UserProfile.objects.get_or_create(
+                user=user,
+                defaults={'is_technician': False}
+            )
+
+            if profile.is_technician:
+                return redirect('technician_dashboard')
+            else:
+                return redirect('user_dashboard')
         else:
             messages.error(request, 'Invalid username or password.')
-    else:
-        form = UserLoginForm()
 
     context = {
-        'form': form,
         'title': 'Login - FixIT',
         'hide_navigation': True
     }
@@ -838,23 +868,30 @@ def check_current_storage(request):
     
     return JsonResponse(config)
 
+
 @login_required
 def technician_dashboard_view(request):
     """
     Display technician dashboard
     """
     user = request.user
-    # Check if user is a technician (adjust this based on your user model)
-    if not hasattr(user, 'profile') or not user.profile.is_technician:
+    profile = user.profile  # <-- Correct way to access UserProfile
+
+    profile.refresh_from_db()  # ensure updated values
+
+    # Check if user is a technician
+    if not profile.is_technician:
         messages.error(request, 'You do not have permission to access the technician dashboard.')
         return redirect('user_dashboard')
-    
+
     context = {
         'user': user,
-        'profile': user.profile,
+        'profile': profile,
         'title': 'Technician Dashboard - FixIT'
     }
     return render(request, 'dashboard/technician_dashboard.html', context)
+
+
 
 
 @login_required
@@ -863,14 +900,24 @@ def user_dashboard_view(request):
     Display user dashboard
     """
     user = request.user
-    # Check if user is a regular user (not technician)
-    if hasattr(user, 'profile') and user.profile.is_technician:
-        messages.error(request, 'You do not have permission to access the user dashboard.')
+
+    # Get or create user profile
+    profile, created = UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'is_technician': False}
+    )
+
+    if created:
+        messages.info(request, 'Your profile has been created.')
+
+    # Check if user is a technician and redirect
+    if profile.is_technician:
+        messages.info(request, 'Redirecting to technician dashboard.')
         return redirect('technician_dashboard')
-    
+
     context = {
         'user': user,
-        'profile': user.profile,
+        'profile': profile,
         'title': 'User Dashboard - FixIT'
     }
     return render(request, 'dashboard/user_dashboard.html', context)
@@ -918,11 +965,24 @@ def change_password_view(request):
     return render(request, 'accounts/change_password.html')
 
 #test
-from django.shortcuts import redirect
 def redirect_to_correct_dashboard(user):
-    if hasattr(user, 'profile') and user.profile.is_technician:
+    """
+    Redirect user to the appropriate dashboard based on their role.
+    """
+    try:
+        profile = user.profile  # Use related_name='profile' from your model
+    except UserProfile.DoesNotExist:
+        # Fallback: create profile if somehow missing
+        profile = UserProfile.objects.create(user=user, is_technician=False)
+
+    if profile.is_technician:
         return redirect('technician_dashboard')
-    return redirect('user_dashboard')
+    else:
+        return redirect('user_dashboard')
+
+
+
+
 
 
 
