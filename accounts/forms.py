@@ -25,6 +25,30 @@ class UserLoginForm(AuthenticationForm):
         })
     )
 
+class UserSignUpForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+    
+    class Meta:
+        model = User  # This uses Django's built-in User model
+        fields = ['username', 'email', 'password1', 'password2']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add CSS classes to form fields
+        for field_name in self.fields:
+            self.fields[field_name].widget.attrs.update({
+                'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300'
+            })
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        if commit:
+            user.save()
+            # Your signal will automatically create UserProfile here!
+        return user
+    
+    
 class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
