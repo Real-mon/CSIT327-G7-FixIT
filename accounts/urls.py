@@ -24,6 +24,9 @@ urlpatterns = [
     path('debug/list-files/', views.list_bucket_files, name='list_files'),
     path('debug/upload-flow/', views.debug_upload_flow, name='debug_upload_flow'),
     path('debug/storage-type/', views.check_current_storage, name='check_storage_type'),
+    path('technician/<int:technician_id>/', views.technician_detail_view, name='technician_detail'),
+    path('request-assistance/', views.request_assistance_view, name='request_assistance'),
+    path('technician/<int:technician_id>/availability/', views.get_technician_availability, name='technician_availability'),
 
 
      
