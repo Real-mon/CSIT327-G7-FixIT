@@ -184,6 +184,13 @@ class AssistanceRequest(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assistance_requests')
     technician = models.ForeignKey(Technician, on_delete=models.CASCADE, related_name='assistance_requests')
+    ticket = models.ForeignKey(
+        'CreateTicket', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        related_name='assistance_requests'
+    )
     title = models.CharField(max_length=200)
     description = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')

@@ -221,11 +221,9 @@ def technician_directory_view(request):
 
 @login_required
 @require_POST
-@login_required
-@require_POST
 def request_assistance_view(request):
     """
-    Handle assistance requests to technicians
+    Handle assistance requests to technicians and create tickets
     """
     try:
         data = json.loads(request.body)
@@ -249,10 +247,21 @@ def request_assistance_view(request):
         
         technician = get_object_or_404(Technician, id=technician_id)
         
-        # Create assistance request
+        # Create a corresponding ticket first
+        ticket = CreateTicket.objects.create(
+            user=request.user,
+            title=title,
+            description=description,
+            category='other',  # Default category
+            priority=priority,
+            status='open'
+        )
+        
+        # Create assistance request linked to the ticket
         assistance_request = AssistanceRequest.objects.create(
             user=request.user,
             technician=technician,
+            ticket=ticket,  # Link to the created ticket
             title=title,
             description=description,
             priority=priority
@@ -261,7 +270,8 @@ def request_assistance_view(request):
         return JsonResponse({
             'success': True,
             'message': f'Assistance request sent to {technician.full_name}',
-            'request_id': assistance_request.id
+            'request_id': assistance_request.id,
+            'ticket_id': ticket.id
         })
         
     except json.JSONDecodeError:
@@ -1312,6 +1322,31 @@ def available_technicians(request):
 
     return render(request, 'accounts/available_technicians.html', {'technicians': technicians})
 
+@login_required
+def my_tickets(request):
+    # Get tickets with prefetch for assistance requests and technicians
+    tickets = CreateTicket.objects.filter(user=request.user).prefetch_related(
+        'assistance_requests__technician__user_profile__user'
+    ).order_by('-created_at')
+    
+    # Prepare ticket data with technician info
+    ticket_data = []
+    for ticket in tickets:
+        ticket_info = {
+            'ticket': ticket,
+            'assigned_technician': None
+        }
+        
+        # Check if there's an assistance request for this ticket
+        assistance_request = ticket.assistance_requests.first()
+        if assistance_request and assistance_request.technician:
+            ticket_info['assigned_technician'] = assistance_request.technician
+            
+        ticket_data.append(ticket_info)
+    
+    return render(request, 'accounts/my_tickets.html', {
+        'ticket_data': ticket_data
+    })
 
 from .utils import create_notification
 
