@@ -25,30 +25,48 @@ class UserLoginForm(AuthenticationForm):
         })
     )
 
+from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from .models import UserProfile  # Make sure this import exists
+
 class UserSignUpForm(UserCreationForm):
     email = forms.EmailField(required=True)
-    
+    user_type = forms.ChoiceField(
+        choices=[('user', 'User'), ('technician', 'Technician')],
+        widget=forms.HiddenInput(),  # can be RadioSelect if you want the user to choose
+        required=False
+    )
+
     class Meta:
-        model = User  # This uses Django's built-in User model
-        fields = ['username', 'email', 'password1', 'password2']
-    
+        model = User
+        fields = ['username', 'email', 'password1', 'password2', 'user_type']
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Add CSS classes to form fields
-        for field_name in self.fields:
-            self.fields[field_name].widget.attrs.update({
+        # Add CSS classes to all fields
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({
                 'class': 'w-full px-4 py-3 rounded-xl border-2 border-[#8fbaf3]/30 bg-white/25 focus:outline-none focus:border-[#0245a3] focus:bg-white/35 transition-all duration-300'
             })
-    
+
     def save(self, commit=True):
+        # Save the User object first
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
+
         if commit:
             user.save()
-            # Your signal will automatically create UserProfile here!
+
+            # Create or update UserProfile
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            user_type = self.cleaned_data.get('user_type', 'user')
+            profile.is_technician = (user_type == 'technician')
+            profile.save()
+
         return user
-    
-    
+
+
 class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
