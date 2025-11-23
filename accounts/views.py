@@ -14,7 +14,11 @@ from django.shortcuts import render
 from .models import Ticket, UserSettings
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q
+from django.db.models import Q, Avg, Count
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .models import Technician, TechnicianSpecialty, AssistanceRequest
 from .models import User, UserProfile, Message, Contact, BotChat, BotMessage
 from django.utils import timezone
 
@@ -125,9 +129,194 @@ def dashboard_view(request):
 
 @login_required
 def technician_directory_view(request):
-    return render(request, 'dashboard/technician_directory.html')
+    """
+    Display technician directory with dynamic data from database
+    """
+    # Get all technicians with their profiles and specialties
+    technicians = Technician.objects.select_related(
+        'user_profile', 
+        'user_profile__user'
+    ).prefetch_related('specialties').all()
+    
+    # Apply search filter
+    search_query = request.GET.get('search', '')
+    if search_query:
+        technicians = technicians.filter(
+            Q(user_profile__user__first_name__icontains=search_query) |
+            Q(user_profile__user__last_name__icontains=search_query) |
+            Q(user_profile__user__username__icontains=search_query) |
+            Q(specialties__name__icontains=search_query) |
+            Q(bio__icontains=search_query)
+        ).distinct()
+    
+    # Apply service filter
+    service_filter = request.GET.get('service', '')
+    if service_filter:
+        technicians = technicians.filter(
+            specialties__name__icontains=service_filter
+        ).distinct()
+    
+    # Apply availability filter
+    availability_filter = request.GET.get('availability', '')
+    if availability_filter == 'available':
+        technicians = technicians.filter(is_available=True)
+    elif availability_filter == 'busy':
+        technicians = technicians.filter(is_available=False)
+    
+    # Apply sorting
+    sort_by = request.GET.get('sort', 'rating')
+    if sort_by == 'name':
+        technicians = technicians.order_by('user_profile__user__first_name', 'user_profile__user__last_name')
+    elif sort_by == 'experience':
+        technicians = technicians.order_by('-experience_years')
+    elif sort_by == 'response_time':
+        technicians = technicians.order_by('average_response_time')
+    elif sort_by == 'rate':
+        technicians = technicians.order_by('hourly_rate')
+    else:  # Default to rating
+        technicians = technicians.order_by('-average_rating', 'user_profile__user__first_name')
+    
+    # Get all specialties for filter dropdown
+    all_specialties = TechnicianSpecialty.objects.all()
+    
+    # Prepare technician data for template
+    technician_data = []
+    for technician in technicians:
+        technician_data.append({
+            'id': technician.id,
+            'user_id': technician.user_profile.user.id,
+            'first_name': technician.user_profile.user.first_name,
+            'last_name': technician.user_profile.user.last_name,
+            'username': technician.user_profile.user.username,
+            'email': technician.user_profile.user.email,
+            'specialties': technician.get_specialties_list(),
+            'rating': technician.average_rating,
+            'review_count': technician.review_count,
+            'experience_years': technician.experience_years,
+            'response_time': technician.average_response_time,
+            'availability_status': technician.availability_status,
+            'availability_class': technician.availability_class,
+            'profile_picture_url': technician.profile_picture_url,
+            'initials': technician.initials,
+            'bio': technician.bio,
+            'hourly_rate': technician.hourly_rate,
+            'certification': technician.certification,
+            'completed_tickets': technician.completed_tickets,
+            'success_rate': technician.success_rate,
+            'languages': technician.languages,
+        })
+    
+    context = {
+        'technicians': technician_data,
+        'all_specialties': all_specialties,
+        'search_query': search_query,
+        'selected_service': service_filter,
+        'selected_sort': sort_by,
+        'selected_availability': availability_filter,
+        'title': 'Technician Directory - FixIT'
+    }
+    
+    return render(request, 'dashboard/technician_directory.html', context)
 
 
+@login_required
+@require_POST
+@login_required
+@require_POST
+def request_assistance_view(request):
+    """
+    Handle assistance requests to technicians
+    """
+    try:
+        data = json.loads(request.body)
+        technician_id = data.get('technician_id')
+        title = data.get('title', 'Assistance Request').strip()
+        description = data.get('description', '').strip()
+        priority = data.get('priority', 'medium')
+        
+        # Validate required fields
+        if not title:
+            return JsonResponse({
+                'success': False,
+                'error': 'Title is required'
+            }, status=400)
+            
+        if not description:
+            return JsonResponse({
+                'success': False,
+                'error': 'Description is required'
+            }, status=400)
+        
+        technician = get_object_or_404(Technician, id=technician_id)
+        
+        # Create assistance request
+        assistance_request = AssistanceRequest.objects.create(
+            user=request.user,
+            technician=technician,
+            title=title,
+            description=description,
+            priority=priority
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Assistance request sent to {technician.full_name}',
+            'request_id': assistance_request.id
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Technician.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Technician not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+        
+@login_required
+def technician_detail_view(request, technician_id):
+    """
+    Display detailed technician profile
+    """
+    technician = get_object_or_404(
+        Technician.objects.select_related('user_profile', 'user_profile__user')
+                         .prefetch_related('specialties', 'reviews'),
+        id=technician_id
+    )
+    
+    # Get recent reviews
+    recent_reviews = technician.reviews.select_related('user').order_by('-created_at')[:5]
+    
+    context = {
+        'technician': technician,
+        'recent_reviews': recent_reviews,
+        'title': f'{technician.full_name} - Technician Profile - FixIT'
+    }
+    
+    return render(request, 'dashboard/technician_detail.html', context)
+
+
+
+@login_required
+def get_technician_availability(request, technician_id):
+    """
+    Check technician availability (AJAX endpoint)
+    """
+    technician = get_object_or_404(Technician, id=technician_id)
+    
+    return JsonResponse({
+        'is_available': technician.is_available,
+        'status': technician.availability_status,
+        'response_time': technician.average_response_time,
+        'working_hours': f"{technician.working_hours_start.strftime('%H:%M')} - {technician.working_hours_end.strftime('%H:%M')}"
+    })
 
 
 @login_required
