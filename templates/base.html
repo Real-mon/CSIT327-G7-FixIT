@@ -106,7 +106,7 @@
         {% endblock %}
     </main>
 
-    <!-- Footer Block -->
+<!-- Footer Block -->
     {% block footer %}
     {% if not hide_navigation %}
     <footer class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white mt-12">
@@ -114,6 +114,9 @@
             <div class="text-center">
                 <p class="text-sm">&copy; 2025 FixIT - Computer Repair Service. All rights reserved.</p>
                 <p class="text-xs text-white mt-1">Your trusted partner in computer solutions</p>
+                <p class="text-xs text-white mt-1">
+                    <a href="{% url 'faq' %}" class="hover:underline hover:text-gray-200 transition-colors">Help Center</a>
+                </p>
             </div>
         </div>
     </footer>

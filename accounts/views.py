@@ -1422,3 +1422,11 @@ def respond_ticket(request, ticket_id):
 
     return redirect('ticket_detail', ticket_id=ticket.id)
 
+def faq_view(request):
+    """
+    Display FAQ/Help Center page
+    """
+    context = {
+        'title': 'Help Center - FixIT'
+    }
+    return render(request, 'accounts/FAQ_Page.html', context)
