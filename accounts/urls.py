@@ -28,8 +28,8 @@ urlpatterns = [
     path('request-assistance/', views.request_assistance_view, name='request_assistance'),
     path('technician/<int:technician_id>/availability/', views.get_technician_availability, name='technician_availability'),
 
-
-     
+    #FAQ/Help Center
+    path('faq/', views.faq_view, name='faq'),
 
     #History
     path('profile/history/', views.ticket_history, name='ticket_history'),

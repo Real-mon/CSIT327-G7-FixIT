@@ -1,0 +1,857 @@
+{% extends 'base.html' %}
+
+{% block title %}Help Center - FixIT{% endblock %}
+
+{% block content %}
+<!-- Animated Background -->
+<div class="absolute inset-0 overflow-hidden">
+    <div class="absolute -inset-10 opacity-20">
+        <div class="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+        <div class="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-r from-[#bdf1f6] to-[#8fbaf3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
+    </div>
+</div>
+
+<div class="relative min-h-screen">
+    <div class="flex">
+        <!-- Sidebar (Left Side) -->
+        <div class="w-64 bg-white/20 backdrop-blur-lg border-r border-[#8fbaf3]/40 min-h-screen p-6">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3 mb-8">
+                <div class="w-10 h-10 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-xl flex items-center justify-center">
+                    <i class="fas fa-question-circle text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-[#0245a3]">Help Center</h1>
+                    <p class="text-xs text-[#0245a3]">FAQ Categories</p>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="space-y-2">
+                <a href="#account-info" class="faq-category-link flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-user-circle w-5"></i>
+                    <span>Account Info</span>
+                </a>
+                <a href="#tickets" class="faq-category-link flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-ticket-alt w-5"></i>
+                    <span>Tickets & Support</span>
+                </a>
+                <a href="#messaging" class="faq-category-link flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-comments w-5"></i>
+                    <span>Messaging</span>
+                </a>
+                <a href="#technical" class="faq-category-link flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-tools w-5"></i>
+                    <span>Technical Issues</span>
+                </a>
+            </nav>
+
+            <!-- Need Help Card -->
+            <div class="mt-8 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-xl p-5 text-white">
+                <i class="fas fa-headset text-3xl mb-3"></i>
+                <h4 class="font-bold text-lg mb-2">Need More Help?</h4>
+                <p class="text-sm mb-4 text-white/80">Contact our support team</p>
+                <a href="{% url 'create_ticket' %}" 
+                   class="block w-full bg-white text-[#0245a3] text-center font-semibold px-4 py-2 rounded-lg hover:bg-white/90 transition text-sm">
+                    Create Ticket
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-8">
+            <!-- Back Button -->
+            <div class="mb-4">
+                <a href="{% url 'dashboard' %}" class="inline-flex items-center text-[#0245a3] hover:text-[#8fbaf3] transition-colors font-semibold">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Dashboard
+                </a>
+            </div>
+            
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-[#0245a3] mb-2">Help Center</h1>
+                <p class="text-[#0245a3]">Find answers to frequently asked questions</p>
+            </div>
+
+            <!-- Account Information Section -->
+            <section id="account-info" class="mb-12 scroll-mt-8">
+                <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-2xl font-bold text-white mb-6 pb-2 border-b-2 border-white/20">
+                        ACCOUNT INFORMATION
+                    </h2>
+
+                    <div class="space-y-4">
+                        <!-- Question 1 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I create an account?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>To create an account:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Click on the "Sign Up" button on the homepage</li>
+                                    <li>Select your user type (User or Technician)</li>
+                                    <li>Fill in your email, username, and password</li>
+                                    <li>Click "Create Account"</li>
+                                    <li>You'll be automatically logged in after successful registration</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <!-- Question 2 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I reset my password?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>To reset your password:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Go to the login page</li>
+                                    <li>Click on "Forgot Password?"</li>
+                                    <li>Enter your registered email address</li>
+                                    <li>Follow the instructions sent to your email</li>
+                                    <li>Create a new password and confirm it</li>
+                                </ol>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    If you're already logged in, you can change your password in Settings.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 3 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I update my profile information?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>To update your profile:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Log in to your account</li>
+                                    <li>Click on "Update Profile" in the navigation menu</li>
+                                    <li>Edit your personal information (name, email, phone, address, etc.)</li>
+                                    <li>Upload a profile picture if desired (max 5MB)</li>
+                                    <li>Click "Save Changes" to update your profile</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <!-- Question 4 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>What's the difference between User and Technician accounts?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p class="mb-3"><strong>User Account:</strong></p>
+                                <ul class="list-disc ml-6 space-y-1 mb-4">
+                                    <li>Create support tickets for technical issues</li>
+                                    <li>Message technicians for help</li>
+                                    <li>Track ticket history</li>
+                                    <li>Chat with FixIT Assistant bot</li>
+                                </ul>
+                                <p class="mb-3"><strong>Technician Account:</strong></p>
+                                <ul class="list-disc ml-6 space-y-1">
+                                    <li>Receive and respond to support tickets</li>
+                                    <li>Communicate with users seeking help</li>
+                                    <li>Manage service requests</li>
+                                    <li>Listed in technician directory</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Question 5 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I delete my account?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>To delete your account, please contact our support team:</p>
+                                <ul class="list-disc ml-6 mt-2 space-y-2">
+                                    <li>Email: support@fixit.com</li>
+                                    <li>Create a support ticket requesting account deletion</li>
+                                    <li>Message a technician through the platform</li>
+                                </ul>
+                                <p class="mt-3 text-sm text-red-300">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    Account deletion is permanent and cannot be undone. All your data, tickets, and messages will be permanently deleted.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 6 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>Can I change my account type from User to Technician?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>Yes, you can request to change your account type:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Contact our support team through a support ticket</li>
+                                    <li>Provide relevant qualifications or experience (for Technician accounts)</li>
+                                    <li>Wait for approval from the admin team</li>
+                                    <li>Your account type will be updated upon approval</li>
+                                </ol>
+                                <p class="mt-3 text-sm text-blue-300">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Technician accounts may require verification of technical skills and experience.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 7 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I manage notification settings?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>To manage your notification preferences:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Go to your Dashboard</li>
+                                    <li>Click on "Settings" in the sidebar or navigation</li>
+                                    <li>Toggle Email Notifications and SMS Notifications as desired</li>
+                                    <li>Changes are saved automatically</li>
+                                </ol>
+                                <p class="mt-3">You can receive notifications for:</p>
+                                <ul class="list-disc ml-6 mt-1 space-y-1">
+                                    <li>New messages from technicians</li>
+                                    <li>Ticket status updates</li>
+                                    <li>Account security alerts</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tickets & Support Section -->
+            <section id="tickets" class="mb-12 scroll-mt-8">
+                <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-2xl font-bold text-white mb-6 pb-2 border-b-2 border-white/20">
+                        TICKETS & SUPPORT
+                    </h2>
+
+                    <div class="space-y-4">
+                        <!-- Question 1 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I create a support ticket?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>To create a support ticket:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Go to your Dashboard</li>
+                                    <li>Click on "Create Ticket" button (or find it in the sidebar)</li>
+                                    <li>Fill in the ticket details:
+                                        <ul class="list-disc ml-6 mt-1">
+                                            <li>Title: Brief description of your issue</li>
+                                            <li>Description: Detailed explanation</li>
+                                            <li>Category: Hardware, Software, Network, or Other</li>
+                                            <li>Priority: Low, Medium, High, or Critical</li>
+                                        </ul>
+                                    </li>
+                                    <li>Click "Submit Ticket"</li>
+                                    <li>You'll receive a ticket number for tracking</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <!-- Question 2 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How can I track my ticket status?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>You can track your tickets in multiple ways:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Go to "My Tickets" in the sidebar menu</li>
+                                    <li>View all your tickets with their current status:
+                                        <ul class="list-disc ml-6 mt-1">
+                                            <li><strong>Open:</strong> Ticket has been submitted and waiting for technician assignment</li>
+                                            <li><strong>Pending:</strong> Technician is working on your issue</li>
+                                            <li><strong>Solved:</strong> Issue has been resolved</li>
+                                        </ul>
+                                    </li>
+                                    <li>Click on any ticket to view details and updates</li>
+                                    <li>Check your email for notifications (if enabled in Settings)</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <!-- Question 3 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>What ticket priorities should I choose?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>Choose the appropriate priority level:</p>
+                                <div class="space-y-3 mt-2">
+                                    <div class="bg-white/10 rounded-lg p-3">
+                                        <p class="font-semibold text-green-300">🟢 Low Priority</p>
+                                        <p class="text-sm mt-1">Minor issues, questions, or feature requests. Not affecting daily work.</p>
+                                        <p class="text-xs text-white/60 mt-1">Example: "How do I change my profile picture?"</p>
+                                    </div>
+                                    <div class="bg-white/10 rounded-lg p-3">
+                                        <p class="font-semibold text-yellow-300">🟡 Medium Priority</p>
+                                        <p class="text-sm mt-1">Issues affecting productivity but have workarounds.</p>
+                                        <p class="text-xs text-white/60 mt-1">Example: "Printer not working, can use another one"</p>
+                                    </div>
+                                    <div class="bg-white/10 rounded-lg p-3">
+                                        <p class="font-semibold text-orange-300">🟠 High Priority</p>
+                                        <p class="text-sm mt-1">Service degradation affecting multiple users or critical functions.</p>
+                                        <p class="text-xs text-white/60 mt-1">Example: "Internet connection very slow for entire office"</p>
+                                    </div>
+                                    <div class="bg-white/10 rounded-lg p-3">
+                                        <p class="font-semibold text-red-300">🔴 Critical Priority</p>
+                                        <p class="text-sm mt-1">Complete service outage or data loss. Immediate attention needed.</p>
+                                        <p class="text-xs text-white/60 mt-1">Example: "Server down, cannot access any files"</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Question 4 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How long does it take to get a response?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>Response times vary based on ticket priority:</p>
+                                <ul class="list-disc ml-6 mt-2 space-y-2">
+                                    <li><strong>Critical:</strong> Within 1 hour</li>
+                                    <li><strong>High:</strong> Within 4 hours</li>
+                                    <li><strong>Medium:</strong> Within 24 hours</li>
+                                    <li><strong>Low:</strong> Within 48 hours</li>
+                                </ul>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    These are target response times. Actual resolution may take longer depending on issue complexity.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 5 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>Can I cancel or close a ticket?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>Yes, you can manage your tickets:</p>
+                                <ul class="list-disc ml-6 mt-2 space-y-2">
+                                    <li>Go to "My Tickets" page</li>
+                                    <li>Click on the ticket you want to close</li>
+                                    <li>Look for the "Close Ticket" or "Mark as Resolved" button</li>
+                                    <li>Confirm your action</li>
+                                </ul>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    You can also reopen a closed ticket if the issue persists.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 6 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>What information should I include in my ticket?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>For faster resolution, include:</p>
+                                <ul class="list-disc ml-6 mt-2 space-y-2">
+                                    <li><strong>Clear description:</strong> What exactly is the problem?</li>
+                                    <li><strong>When it started:</strong> Date and time the issue began</li>
+                                    <li><strong>Steps to reproduce:</strong> What actions lead to the problem?</li>
+                                    <li><strong>Error messages:</strong> Any error codes or messages you see</li>
+                                    <li><strong>Device info:</strong> Computer model, operating system, browser (if relevant)</li>
+                                    <li><strong>What you've tried:</strong> Any troubleshooting steps you've already attempted</li>
+                                    <li><strong>Impact:</strong> How is this affecting your work?</li>
+                                </ul>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-lightbulb mr-1"></i>
+                                    The more details you provide, the faster we can solve your issue!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Messaging Section -->
+            <section id="messaging" class="mb-12 scroll-mt-8">
+                <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-2xl font-bold text-white mb-6 pb-2 border-b-2 border-white/20">
+                        MESSAGING
+                    </h2>
+
+                    <div class="space-y-4">
+                        <!-- Question 1 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I message a technician?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>To start a conversation with a technician:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Go to "Messages" in the sidebar</li>
+                                    <li>Browse the "Technician Directory" to find available technicians</li>
+                                    <li>Click on a technician's profile</li>
+                                    <li>Click "Start Conversation" or "Message" button</li>
+                                    <li>Type your message and hit send</li>
+                                </ol>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Technicians will receive notifications and respond as soon as they're available.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 2 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>What is the FixIT Assistant bot?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>FixIT Assistant is an automated chatbot that helps with common technical issues:</p>
+                                <ul class="list-disc ml-6 mt-2 space-y-2">
+                                    <li><strong>Available 24/7:</strong> Get instant help anytime</li>
+                                    <li><strong>Common Issues:</strong> Solutions for internet, computer performance, printer problems, etc.</li>
+                                    <li><strong>Quick Answers:</strong> FAQs and troubleshooting guides</li>
+                                    <li><strong>No Wait Time:</strong> Immediate responses for basic questions</li>
+                                </ul>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-robot mr-1"></i>
+                                    If the bot can't solve your issue, it will recommend creating a ticket or contacting a technician.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 3 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I start a chat with the FixIT Assistant?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>To chat with the FixIT Assistant bot:</p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li>Navigate to "Messages" from your dashboard</li>
+                                    <li>Click on "Start Bot Chat" or "Chat with FixIT Assistant" button</li>
+                                    <li>A new chat window will open with a welcome message</li>
+                                    <li>Type your question or describe your issue</li>
+                                    <li>The bot will provide instant troubleshooting steps</li>
+                                </ol>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-lightbulb mr-1"></i>
+                                    You can also use the "Common Issues" dropdown for quick solutions to popular problems.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 4 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>Can I view my message history?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>Yes, all your conversations are saved:</p>
+                                <ul class="list-disc ml-6 mt-2 space-y-2">
+                                    <li>Go to the "Messages" page</li>
+                                    <li>You'll see a list of all your conversations on the left side</li>
+                                    <li>Click on any conversation to view the full message history</li>
+                                    <li>Both technician chats and bot conversations are saved</li>
+                                    <li>Scroll up to see older messages</li>
+                                </ul>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Message history helps you reference previous solutions and maintain conversation context.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 5 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I know if a technician has read my message?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>Message status indicators:</p>
+                                <ul class="list-disc ml-6 mt-2 space-y-2">
+                                    <li><strong>Sent:</strong> Message has been delivered to the system</li>
+                                    <li><strong>Read:</strong> Technician has opened and viewed your message</li>
+                                    <li><strong>Typing:</strong> Technician is currently typing a response</li>
+                                </ul>
+                                <p class="mt-3">You can also check:</p>
+                                <ul class="list-disc ml-6 mt-1 space-y-1">
+                                    <li>Notification settings to receive alerts for new messages</li>
+                                    <li>Last active time of the technician</li>
+                                    <li>Response time estimates in the conversation</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Question 6 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>Can I attach files or screenshots in messages?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>Currently, file attachments in direct messages are not supported. However, you can:</p>
+                                <ul class="list-disc ml-6 mt-2 space-y-2">
+                                    <li><strong>Create a ticket:</strong> Tickets support file uploads and screenshots</li>
+                                    <li><strong>Share links:</strong> Upload files to cloud storage and share the link in messages</li>
+                                    <li><strong>Describe the issue:</strong> Provide detailed text descriptions and error messages</li>
+                                </ul>
+                                <p class="mt-3 text-sm text-blue-300">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    For issues requiring screenshots or files, we recommend creating a support ticket instead.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Technical Issues Section -->
+            <section id="technical" class="mb-12 scroll-mt-8">
+                <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-2xl font-bold text-white mb-6 pb-2 border-b-2 border-white/20">
+                        TECHNICAL ISSUES
+                    </h2>
+
+                    <div class="space-y-4">
+                        <!-- Question 1 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>My computer is running very slow, what should I do?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p><strong>Quick fixes to try:</strong></p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li><strong>Restart your computer:</strong> This clears temporary files and refreshes system resources</li>
+                                    <li><strong>Close unused programs:</strong> Open Task Manager (Ctrl+Shift+Esc) and close unnecessary applications</li>
+                                    <li><strong>Check disk space:</strong> Ensure you have at least 15% free space on your C: drive</li>
+                                    <li><strong>Run antivirus scan:</strong> Malware can significantly slow down your computer</li>
+                                    <li><strong>Update Windows:</strong> Install pending updates that may improve performance</li>
+                                    <li><strong>Disable startup programs:</strong> Prevent unnecessary apps from launching at startup</li>
+                                </ol>
+                                <p class="mt-3 text-sm text-white/70">
+                                    <i class="fas fa-tools mr-1"></i>
+                                    If the problem persists, create a ticket or chat with FixIT Assistant for more advanced solutions.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 2 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>I can't connect to the internet, how do I fix this?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p><strong>Troubleshooting steps:</strong></p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li><strong>Check physical connections:</strong> Ensure Ethernet cable is plugged in or WiFi is turned on</li>
+                                    <li><strong>Restart your router:</strong> Unplug for 30 seconds, then plug back in</li>
+                                    <li><strong>Restart your computer:</strong> Simple but often effective</li>
+                                    <li><strong>Run Windows Network Diagnostics:</strong> Right-click network icon → Troubleshoot problems</li>
+                                    <li><strong>Forget and reconnect to WiFi:</strong> Remove the network and add it again with the password</li>
+                                    <li><strong>Update network drivers:</strong> Device Manager → Network Adapters → Update driver</li>
+                                    <li><strong>Check with other devices:</strong> Verify if other devices can connect (helps identify if it's router or computer issue)</li>
+                                </ol>
+                                <p class="mt-3 text-sm text-yellow-300">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    If none of these work, contact your ISP or create a high-priority ticket.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 3 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>My printer won't print, what should I check?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p><strong>Common printer issues and solutions:</strong></p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li><strong>Basic checks:</strong>
+                                        <ul class="list-disc ml-6 mt-1">
+                                            <li>Is the printer powered on?</li>
+                                            <li>Is there paper in the tray?</li>
+                                            <li>Are ink/toner levels sufficient?</li>
+                                            <li>Are there any error lights blinking?</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Check connections:</strong> Verify USB cable or network connection is secure</li>
+                                    <li><strong>Set as default printer:</strong> Settings → Devices → Printers & scanners</li>
+                                    <li><strong>Clear print queue:</strong> Cancel all pending print jobs and try again</li>
+                                    <li><strong>Restart printer and computer:</strong> Power cycle both devices</li>
+                                    <li><strong>Update printer drivers:</strong> Download latest drivers from manufacturer's website</li>
+                                    <li><strong>Run printer troubleshooter:</strong> Windows Settings → Update & Security → Troubleshoot</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <!-- Question 4 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>I'm getting a "Blue Screen of Death" (BSOD), what does this mean?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p>A Blue Screen of Death indicates a critical system error. Here's what to do:</p>
+                                <div class="space-y-3 mt-2">
+                                    <div class="bg-white/10 rounded-lg p-3">
+                                        <p class="font-semibold">Immediate Actions:</p>
+                                        <ul class="list-disc ml-6 mt-1 space-y-1 text-sm">
+                                            <li>Note the error code (e.g., "STOP: 0x0000007B")</li>
+                                            <li>Take a photo of the screen if possible</li>
+                                            <li>Restart your computer</li>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-white/10 rounded-lg p-3">
+                                        <p class="font-semibold">Troubleshooting Steps:</p>
+                                        <ul class="list-disc ml-6 mt-1 space-y-1 text-sm">
+                                            <li>Boot in Safe Mode (F8 during startup)</li>
+                                            <li>Check for recent software/driver installations and uninstall them</li>
+                                            <li>Run Windows Memory Diagnostic tool</li>
+                                            <li>Check for Windows updates</li>
+                                            <li>Scan for malware</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p class="mt-3 text-sm text-red-300">
+                                    <i class="fas fa-exclamation-circle mr-1"></i>
+                                    <strong>Important:</strong> If BSOD occurs frequently, create a CRITICAL priority ticket immediately. This could indicate hardware failure.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 5 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>How do I backup my important files?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p><strong>Backup methods:</strong></p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li><strong>External Hard Drive:</strong>
+                                        <ul class="list-disc ml-6 mt-1">
+                                            <li>Connect external drive to your computer</li>
+                                            <li>Copy important folders (Documents, Pictures, etc.)</li>
+                                            <li>Most reliable for large amounts of data</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Cloud Storage:</strong>
+                                        <ul class="list-disc ml-6 mt-1">
+                                            <li>Use services like Google Drive, OneDrive, or Dropbox</li>
+                                            <li>Automatic syncing keeps files up-to-date</li>
+                                            <li>Access files from anywhere</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Windows Backup:</strong>
+                                        <ul class="list-disc ml-6 mt-1">
+                                            <li>Settings → Update & Security → Backup</li>
+                                            <li>Turn on "File History" for automatic backups</li>
+                                            <li>Schedule regular system image backups</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                <p class="mt-3 text-sm text-green-300">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    <strong>Best Practice:</strong> Follow the 3-2-1 rule: 3 copies of data, 2 different media types, 1 offsite backup.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Question 6 -->
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden border border-white/20">
+                            <button 
+                                class="w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex justify-between items-center font-semibold text-white"
+                                onclick="toggleFAQ(this)"
+                            >
+                                <span>What should I do if I suspect my computer has a virus?</span>
+                                <i class="fas fa-plus text-white transition-transform duration-300"></i>
+                            </button>
+                            <div class="faq-answer hidden px-6 py-4 bg-white/10 text-white/90 border-t border-white/20">
+                                <p><strong>Signs of malware infection:</strong></p>
+                                <ul class="list-disc ml-6 mt-2 space-y-1">
+                                    <li>Computer running unusually slow</li>
+                                    <li>Pop-ups appearing frequently</li>
+                                    <li>Programs opening/closing automatically</li>
+                                    <li>Browser homepage changed without your permission</li>
+                                    <li>Antivirus software disabled</li>
+                                </ul>
+                                <p class="mt-3"><strong>Immediate actions:</strong></p>
+                                <ol class="list-decimal ml-6 mt-2 space-y-2">
+                                    <li><strong>Disconnect from internet:</strong> Prevents malware from spreading or communicating</li>
+                                    <li><strong>Boot in Safe Mode:</strong> Restart and press F8 repeatedly</li>
+                                    <li><strong>Run full antivirus scan:</strong> Use Windows Defender or your installed antivirus</li>
+                                    <li><strong>Use Malwarebytes:</strong> Free tool for additional scanning</li>
+                                    <li><strong>Delete suspicious programs:</strong> Control Panel → Uninstall a program</li>
+                                    <li><strong>Change passwords:</strong> After cleaning, change all important passwords from a clean device</li>
+                                </ol>
+                                <p class="mt-3 text-sm text-red-300">
+                                    <i class="fas fa-shield-alt mr-1"></i>
+                                    <strong>If you can't remove the virus yourself, create a HIGH priority ticket immediately!</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleFAQ(button) {
+    const answer = button.nextElementSibling;
+    const icon = button.querySelector('i');
+    const allAnswers = document.querySelectorAll('.faq-answer');
+    const allIcons = document.querySelectorAll('.fa-plus, .fa-minus');
+    
+    // Close all other FAQs
+    allAnswers.forEach(item => {
+        if (item !== answer) {
+            item.classList.add('hidden');
+        }
+    });
+    
+    // Reset all other icons
+    allIcons.forEach(i => {
+        if (i !== icon) {
+            i.classList.remove('fa-minus', 'rotate-180');
+            i.classList.add('fa-plus');
+        }
+    });
+    
+    // Toggle current FAQ
+    answer.classList.toggle('hidden');
+    
+    // Toggle icon
+    if (answer.classList.contains('hidden')) {
+        icon.classList.remove('fa-minus', 'rotate-180');
+        icon.classList.add('fa-plus');
+    } else {
+        icon.classList.remove('fa-plus');
+        icon.classList.add('fa-minus', 'rotate-180');
+    }
+}
+
+// Smooth scroll for sidebar links
+document.querySelectorAll('.faq-category-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        const targetSection = document.querySelector(targetId);
+        if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Update active state
+            document.querySelectorAll('.faq-category-link').forEach(l => {
+                l.classList.remove('bg-white/20', 'font-semibold');
+            });
+            this.classList.add('bg-white/20', 'font-semibold');
+        }
+    });
+});
+</script>
+
+<style>
+    .animation-delay-2000 { animation-delay: 2s; }
+</style>
+{% endblock %}
