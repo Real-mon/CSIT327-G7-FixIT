@@ -231,6 +231,12 @@ def create_technician_profile(sender, instance, created, **kwargs):
 
 
 #SPRINT 2
+PRIORITY_CHOICES = [
+    ('Low', 'Low'),
+    ('Medium', 'Medium'),
+    ('High', 'High'),
+]
+
 class Ticket(models.Model):
     STATUS_CHOICES = [
         ('open', 'Open'),
@@ -238,21 +244,34 @@ class Ticket(models.Model):
         ('solved', 'Solved'),
     ]
 
-    # If your Supabase table already has a column named "user_id", this will link correctly.
     user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id')
+    technician = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ticket_assigned',  # changed
+        db_column='technician_id'
+    )
 
     title = models.CharField(max_length=100)
     description = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    priority = models.CharField(
+        max_length=10,
+        choices=PRIORITY_CHOICES,
+        default='Medium'  # ✅ important for existing rows
+    )  # ✅ New field
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-
         db_table = 'ticket'
 
     def __str__(self):
         return f"{self.title} ({self.status})"
+
+
 
 
 class UserSettings(models.Model):
@@ -365,6 +384,13 @@ class CreateTicket(models.Model):
     priority = models.CharField(max_length=50, choices=PRIORITY_CHOICES, default='medium')
     status = models.CharField(max_length=50, default='open')
     created_at = models.DateTimeField(auto_now_add=True)
+    technician = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='create_ticket_assigned',  # changed
+    )
 
     def __str__(self):
         return f"Ticket {self.id}: {self.title}"
@@ -386,4 +412,17 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification to {self.recipient.username}: {self.message}"
+
+
+#TECHNICIAN NOTIFICATION
+class Notifications_Technician(models.Model):
+    technician = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    message = models.CharField(max_length=255)
+    ticket = models.ForeignKey('Ticket', on_delete=models.CASCADE, null=True, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'notifications_technician'
+
 

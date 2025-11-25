@@ -248,78 +248,44 @@ def technician_directory_view(request):
     
     return render(request, 'dashboard/technician_directory.html', context)
 
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Ticket, Technician
 
+@csrf_exempt
 @login_required
-@require_POST
 def request_assistance_view(request):
-    """
-    Handle assistance requests to technicians and create tickets
-    """
-    try:
+    if request.method == 'POST':
         data = json.loads(request.body)
-        technician_id = data.get('technician_id')
-        title = data.get('title', 'Assistance Request').strip()
-        description = data.get('description', '').strip()
-        priority = data.get('priority', 'medium')
-        
-        # Validate required fields
-        if not title:
-            return JsonResponse({
-                'success': False,
-                'error': 'Title is required'
-            }, status=400)
-            
-        if not description:
-            return JsonResponse({
-                'success': False,
-                'error': 'Description is required'
-            }, status=400)
-        
-        technician = get_object_or_404(Technician, id=technician_id)
-        
-        # Create a corresponding ticket first
-        ticket = CreateTicket.objects.create(
+        tech_id = data.get('technician_id')
+        title = data.get('title')
+        description = data.get('description')
+        priority = data.get('priority')
+
+        # Create the ticket
+        ticket = Ticket.objects.create(
+            technician_id=tech_id,
             user=request.user,
-            title=title,
-            description=description,
-            category='other',  # Default category
-            priority=priority,
-            status='open'
-        )
-        
-        # Create assistance request linked to the ticket
-        assistance_request = AssistanceRequest.objects.create(
-            user=request.user,
-            technician=technician,
-            ticket=ticket,  # Link to the created ticket
             title=title,
             description=description,
             priority=priority
         )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Assistance request sent to {technician.full_name}',
-            'request_id': assistance_request.id,
-            'ticket_id': ticket.id
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid JSON data'
-        }, status=400)
-    except Technician.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Technician not found'
-        }, status=404)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
-        
+
+        # --- THIS IS THE CRITICAL PART ---
+        # Create a notification for the technician
+        Notifications_Technician.objects.create(
+            technician_id=tech_id,
+            message=f"New assistance request from {request.user.username}: {title}",
+            ticket=ticket
+        )
+
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+
+
+
 @login_required
 def technician_detail_view(request, technician_id):
     """
@@ -330,16 +296,16 @@ def technician_detail_view(request, technician_id):
                          .prefetch_related('specialties', 'reviews'),
         id=technician_id
     )
-    
+
     # Get recent reviews
     recent_reviews = technician.reviews.select_related('user').order_by('-created_at')[:5]
-    
+
     context = {
         'technician': technician,
         'recent_reviews': recent_reviews,
         'title': f'{technician.full_name} - Technician Profile - FixIT'
     }
-    
+
     return render(request, 'dashboard/technician_detail.html', context)
 
 
@@ -868,28 +834,26 @@ def check_current_storage(request):
     
     return JsonResponse(config)
 
+from django.shortcuts import render
+from .models import Ticket
 
-@login_required
 def technician_dashboard_view(request):
-    """
-    Display technician dashboard
-    """
+    # Get the logged-in user
     user = request.user
-    profile = user.profile  # <-- Correct way to access UserProfile
 
-    profile.refresh_from_db()  # ensure updated values
+    # Fetch tickets assigned to this technician (technician_id points to User)
+    tickets = Ticket.objects.filter(technician=user).order_by('-created_at')  # newest first
 
-    # Check if user is a technician
-    if not profile.is_technician:
-        messages.error(request, 'You do not have permission to access the technician dashboard.')
-        return redirect('user_dashboard')
+    return render(request, 'dashboard/technician_dashboard.html', {'tickets': tickets})
 
-    context = {
-        'user': user,
-        'profile': profile,
-        'title': 'Technician Dashboard - FixIT'
-    }
-    return render(request, 'dashboard/technician_dashboard.html', context)
+
+
+
+
+
+
+
+
 
 
 
@@ -1430,3 +1394,28 @@ def faq_view(request):
         'title': 'Help Center - FixIT'
     }
     return render(request, 'accounts/FAQ_Page.html', context)
+
+#TECHNICIAN NOTIFICATION
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from .models import Ticket, Notifications_Technician
+from django.shortcuts import get_object_or_404, redirect
+
+@login_required
+def contact_technician(request, ticket_id, technician_id):
+    ticket = get_object_or_404(Ticket, id=ticket_id)
+    technician = get_object_or_404(User, id=technician_id)
+
+    # Assign technician to the ticket
+    ticket.technician = technician
+    ticket.save()
+
+    # Create notification for technician
+    Notifications_Technician.objects.create(
+        technician=technician,
+        message=f"New ticket assigned: {ticket.title}",
+        ticket=ticket
+    )
+
+    messages.success(request, "Technician has been notified!")
+    return redirect('messages_view')  # or wherever you want to redirect
