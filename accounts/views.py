@@ -19,7 +19,7 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import Technician, TechnicianSpecialty, AssistanceRequest
-from .models import User, UserProfile, Message, Contact, BotChat, BotMessage
+from .models import User, UserProfile, Message, Contact, BotChat, BotMessage, CreateTicket
 from django.utils import timezone
 
 
@@ -252,40 +252,187 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Ticket, Technician
-
 @csrf_exempt
 @login_required
 def request_assistance_view(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
+    print("🔧 === REQUEST ASSISTANCE STARTED ===")
+    
+    if request.method != 'POST':
+        print("❌ Invalid method")
+        return JsonResponse({
+            'success': False, 
+            'error': 'Only POST requests allowed'
+        }, status=400)
+
+    try:
+        # Check if body exists
+        if not request.body:
+            print("❌ Empty request body")
+            return JsonResponse({
+                'success': False, 
+                'error': 'Empty request body'
+            }, status=400)
+
+        # Parse JSON data
+        raw_body = request.body.decode('utf-8')
+        print(f"📦 Raw body: {raw_body}")
+        
+        data = json.loads(raw_body)
+        print(f"📋 Parsed data: {data}")
+        
+        # Extract fields
         tech_id = data.get('technician_id')
         title = data.get('title')
         description = data.get('description')
         priority = data.get('priority')
 
+        print(f"🔍 Extracted fields - tech_id: {tech_id}, title: {title}, description: {description}, priority: {priority}")
+
+        # Validate required fields
+        if not tech_id:
+            print("❌ Missing technician_id")
+            return JsonResponse({
+                'success': False, 
+                'error': 'Missing technician_id'
+            }, status=400)
+
+        if not title or not description:
+            missing = []
+            if not title: missing.append('title')
+            if not description: missing.append('description')
+            print(f"❌ Missing fields: {missing}")
+            return JsonResponse({
+                'success': False, 
+                'error': f'Missing required fields: {", ".join(missing)}'
+            }, status=400)
+
+        # Get the technician
+        try:
+            technician = Technician.objects.get(id=tech_id)
+            technician_user = technician.user_profile.user
+            print(f"✅ Found technician: {technician_user.username} (ID: {technician.id})")
+        except Technician.DoesNotExist:
+            print(f"❌ Technician with id {tech_id} not found")
+            return JsonResponse({
+                'success': False, 
+                'error': f'Technician with ID {tech_id} not found'
+            }, status=400)
+        except Exception as e:
+            print(f"❌ Error getting technician: {e}")
+            return JsonResponse({
+                'success': False, 
+                'error': f'Error finding technician: {str(e)}'
+            }, status=400)
+
         # Create the ticket
-        ticket = Ticket.objects.create(
-            technician_id=tech_id,
-            user=request.user,
-            title=title,
-            description=description,
-            priority=priority
-        )
+        print("🎫 Creating ticket...")
+        try:
+            ticket = CreateTicket.objects.create(
+                user=request.user,
+                title=title,
+                description=description,
+                priority=priority or 'medium',
+                status='open'
+            )
+            print(f"✅ Ticket created: {ticket.id}")
+        except Exception as e:
+            print(f"❌ Error creating ticket: {e}")
+            return JsonResponse({
+                'success': False, 
+                'error': f'Error creating ticket: {str(e)}'
+            }, status=400)
 
-        # --- THIS IS THE CRITICAL PART ---
-        # Create a notification for the technician
-        Notifications_Technician.objects.create(
-            technician_id=tech_id,
-            message=f"New assistance request from {request.user.username}: {title}",
-            ticket=ticket
-        )
+        # Create assistance request
+        print("📋 Creating assistance request...")
+        try:
+            assistance_request = AssistanceRequest.objects.create(
+                user=request.user,
+                technician=technician,
+                ticket=ticket,
+                title=title,
+                description=description,
+                priority=priority or 'medium',
+                status='pending'
+            )
+            print(f"✅ Assistance request created: {assistance_request.id}")
+        except Exception as e:
+            print(f"❌ Error creating assistance request: {e}")
+            # Delete the ticket if assistance request fails
+            ticket.delete()
+            return JsonResponse({
+                'success': False, 
+                'error': f'Error creating assistance request: {str(e)}'
+            }, status=400)
 
-        return JsonResponse({'success': True})
+        # Create contact relationship
+        print("👥 Creating contact...")
+        try:
+            contact_name = f"{technician_user.first_name} {technician_user.last_name}".strip()
+            if not contact_name:
+                contact_name = technician_user.username
+                
+            contact, created = Contact.objects.get_or_create(
+                user=request.user,
+                contact_user=technician_user,
+                defaults={'contact_name': contact_name}
+            )
+            print(f"✅ Contact {'created' if created else 'exists'}: {contact.id}")
+        except Exception as e:
+            print(f"⚠️ Contact creation warning: {e}")
+            # Don't fail the whole request if contact creation fails
 
-    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+        # Create initial message
+        print("💬 Creating initial message...")
+        try:
+            initial_message = f"New assistance request: {title}\n\nDescription: {description}\nPriority: {priority or 'medium'}"
+            
+            Message.objects.create(
+                sender=request.user,
+                receiver=technician_user,
+                content=initial_message,
+                timestamp=timezone.now()
+            )
+            print("✅ Initial message created")
+        except Exception as e:
+            print(f"⚠️ Message creation warning: {e}")
+            # Don't fail the whole request if message creation fails
 
+        # Create notification for technician
+        print("🔔 Creating notification...")
+        try:
+            Notifications_Technician.objects.create(
+                technician=technician_user,
+                message=f"New assistance request from {request.user.username}: {title}",
+                ticket=ticket
+            )
+            print("✅ Notification created")
+        except Exception as e:
+            print(f"⚠️ Notification creation warning: {e}")
+            # Don't fail the whole request if notification creation fails
 
+        print("🎉 === REQUEST ASSISTANCE COMPLETED SUCCESSFULLY ===")
+        return JsonResponse({
+            'success': True, 
+            'ticket_id': ticket.id,
+            'message': 'Assistance request sent successfully'
+        })
 
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON decode error: {e}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'Invalid JSON data in request'
+        }, status=400)
+    except Exception as e:
+        print(f"❌ Unexpected error: {str(e)}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False, 
+            'error': f'Server error: {str(e)}'
+        }, status=500)
+
+#//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 @login_required
 def technician_detail_view(request, technician_id):
     """
@@ -308,6 +455,138 @@ def technician_detail_view(request, technician_id):
 
     return render(request, 'dashboard/technician_detail.html', context)
 
+@login_required
+def technician_messages_view(request):
+    """
+    Display technician messages page
+    """
+    user = request.user
+    
+    # Get technician's assigned tickets to find customer conversations
+    technician_tickets = CreateTicket.objects.filter(
+        assistance_requests__technician__user_profile__user=user
+    ).distinct()
+    
+    # Get customer chats from assigned tickets
+    customer_chats = []
+    for ticket in technician_tickets:
+        customer = ticket.user
+        customer_chats.append({
+            'id': ticket.id,
+            'customer_name': customer.get_full_name() or customer.username,
+            'ticket_id': ticket.id,
+            'ticket_title': ticket.title,
+            'ticket_status': ticket.status,
+            'unread_count': 0  # You can implement unread message counting
+        })
+    
+    # Get selected chat
+    selected_chat_id = request.GET.get('chat')
+    selected_chat = None
+    chat_messages = []
+    
+    if selected_chat_id:
+        try:
+            ticket_id = int(selected_chat_id)
+            selected_ticket = get_object_or_404(CreateTicket, id=ticket_id)
+            
+            # Verify the technician is assigned to this ticket
+            if selected_ticket in technician_tickets:
+                selected_chat = {
+                    'id': selected_ticket.id,
+                    'customer_name': selected_ticket.user.get_full_name() or selected_ticket.user.username,
+                    'ticket_id': selected_ticket.id,
+                    'ticket_title': selected_ticket.title,
+                    'ticket_status': selected_ticket.status
+                }
+                
+                # Get messages for this ticket
+                chat_messages = Message.objects.filter(
+                    Q(ticket=selected_ticket) |
+                    Q(sender=selected_ticket.user, receiver=user) |
+                    Q(sender=user, receiver=selected_ticket.user)
+                ).order_by('timestamp')
+        except ValueError:
+            selected_chat = None
+    
+    # Handle sending messages
+    if request.method == 'POST' and 'send_message' in request.POST:
+        message_content = request.POST.get('message_content', '').strip()
+        chat_id = request.POST.get('chat_id')
+        
+        if message_content and chat_id:
+            try:
+                ticket = CreateTicket.objects.get(id=chat_id)
+                if ticket in technician_tickets:
+                    Message.objects.create(
+                        sender=user,
+                        receiver=ticket.user,
+                        content=message_content,
+                        timestamp=timezone.now(),
+                        ticket=ticket  # If your Message model has a ticket field
+                    )
+                    messages.success(request, 'Message sent successfully!')
+                    return redirect(f'{request.path}?chat={chat_id}')
+            except CreateTicket.DoesNotExist:
+                messages.error(request, 'Ticket not found.')
+    
+    context = {
+        'user': user,
+        'profile': user.profile,
+        'title': 'Messages - FixIT',
+        'customer_chats': customer_chats,
+        'selected_chat': selected_chat,
+        'chat_messages': chat_messages,
+    }
+    
+    return render(request, 'dashboard/technician_messages.html', context)
+
+@login_required
+def technician_tickets_view(request):
+    """
+    Display technician's assigned tickets
+    """
+    user = request.user
+    
+    # Get technician's assigned tickets
+    technician_tickets = CreateTicket.objects.filter(
+        assistance_requests__technician__user_profile__user=user
+    ).distinct()
+    
+    # Prepare ticket data with customer info
+    ticket_data = []
+    for ticket in technician_tickets:
+        customer = ticket.user
+        customer_info = {
+            'full_name': customer.get_full_name() or customer.username,
+            'email': customer.email,
+            'profile_picture_url': getattr(customer.profile, 'profile_picture_url', ''),
+            'initials': (customer.first_name[0] + customer.last_name[0]).upper() 
+                        if customer.first_name and customer.last_name 
+                        else customer.username[:2].upper()
+        }
+        
+        ticket_data.append({
+            'ticket': ticket,
+            'customer': customer_info
+        })
+    
+    # Calculate stats
+    total_tickets = technician_tickets.count()
+    open_tickets = technician_tickets.filter(status='open').count()
+    in_progress_tickets = technician_tickets.filter(status='in_progress').count()
+    resolved_tickets = technician_tickets.filter(status='resolved').count()
+    
+    context = {
+        'ticket_data': ticket_data,
+        'total_tickets': total_tickets,
+        'open_tickets': open_tickets,
+        'in_progress_tickets': in_progress_tickets,
+        'resolved_tickets': resolved_tickets,
+        'title': 'My Tickets - FixIT'
+    }
+    
+    return render(request, 'dashboard/technician_tickets.html', context)
 
 
 @login_required
@@ -1095,34 +1374,59 @@ def user_messages_view(request):
     """
     user = request.user
     
-    # Get all technicians for adding as contacts
-    technicians = UserProfile.objects.filter(is_technician=True).exclude(user=user)
+    # Get user's contacts (technicians they've messaged or have tickets with)
+    user_contacts = Contact.objects.filter(user=user)
     
-    # Get user's contacts
+    # Also get technicians from assistance requests/tickets
+    assistance_technicians = AssistanceRequest.objects.filter(
+        user=user
+    ).select_related('technician__user_profile__user').distinct()
+    
+    # Add technicians from assistance requests to contacts if not already there
+    for assistance in assistance_technicians:
+        technician_user = assistance.technician.user_profile.user
+        contact, created = Contact.objects.get_or_create(
+            user=user,
+            contact_user=technician_user,
+            defaults={'contact_name': f"{technician_user.first_name} {technician_user.last_name}"}
+        )
+    
+    # Refresh contacts after potential additions
     user_contacts = Contact.objects.filter(user=user)
     
     # Get user's bot chats
-    user_bot_chats = []
-    try:
-        user_bot_chats = BotChat.objects.filter(user=user)
-    except Exception as e:
-        print(f"BotChat not available: {e}")
-        # If BotChat doesn't exist, we'll work with contacts only
+    user_bot_chats = BotChat.objects.filter(user=user)
     
     # Combine both types of chats
     user_chats = []
     for contact in user_contacts:
         contact.is_bot = False
+        # Get the latest message for preview
+        latest_message = Message.objects.filter(
+            (Q(sender=user, receiver=contact.contact_user) |
+             Q(sender=contact.contact_user, receiver=user))
+        ).order_by('-timestamp').first()
+        
+        contact.latest_message = latest_message
+        contact.latest_message_time = latest_message.timestamp if latest_message else contact.created_at
         user_chats.append(contact)
+    
     for bot_chat in user_bot_chats:
         bot_chat.is_bot = True
         bot_chat.contact_name = "FixIT Assistant"
+        latest_message = bot_chat.messages.order_by('-timestamp').first()
+        bot_chat.latest_message = latest_message
+        bot_chat.latest_message_time = latest_message.timestamp if latest_message else bot_chat.created_at
         user_chats.append(bot_chat)
+    
+    # Sort chats by latest message time
+    user_chats.sort(key=lambda x: x.latest_message_time, reverse=True)
     
     # Get selected chat for messaging
     selected_chat_id = request.GET.get('chat')
     selected_chat = None
     chat_messages = []
+    related_tickets = []
     
     if selected_chat_id:
         try:
@@ -1140,6 +1444,13 @@ def user_messages_view(request):
                     Q(sender=user, receiver=selected_chat.contact_user) |
                     Q(sender=selected_chat.contact_user, receiver=user)
                 ).order_by('timestamp')
+                
+                # Get related tickets for this technician
+                related_tickets = AssistanceRequest.objects.filter(
+                    user=user,
+                    technician__user_profile__user=selected_chat.contact_user
+                ).select_related('ticket')
+                
         except Exception as e:
             print(f"Error loading chat: {e}")
             selected_chat = None
@@ -1149,17 +1460,13 @@ def user_messages_view(request):
         # Handle starting new bot chat
         if 'start_bot_chat' in request.POST:
             try:
-                # Create new bot chat
                 bot_chat = BotChat.objects.create(user=user)
-                
-                # Add welcome message from bot
                 BotMessage.objects.create(
                     chat=bot_chat,
                     sender=None,
                     content="Hello! I'm FixIT Assistant 👋 I'm here to help you with common issues and FAQs. How can I assist you today?",
                     is_bot=True
                 )
-                
                 return JsonResponse({
                     'success': True, 
                     'chat_id': f'bot_{bot_chat.id}',
@@ -1173,25 +1480,18 @@ def user_messages_view(request):
             chat_id = request.POST.get('chat_id')
             message_content = request.POST.get('message_content', '').strip()
             
-            print(f"DEBUG: Sending message to chat_id: {chat_id}, content: {message_content}")
-            
             if chat_id and message_content:
                 if chat_id.startswith('bot_'):
                     # Handle bot message
                     bot_chat_id = chat_id.replace('bot_', '')
                     try:
                         bot_chat = BotChat.objects.get(id=bot_chat_id, user=user)
-                        
-                        # Save user message
                         user_message = BotMessage.objects.create(
                             chat=bot_chat,
                             sender=user,
                             content=message_content,
                             is_bot=False
                         )
-                        print(f"DEBUG: Saved user message: {user_message.id}")
-                        
-                        # Generate and save bot response
                         bot_response = generate_bot_response(message_content)
                         bot_message = BotMessage.objects.create(
                             chat=bot_chat,
@@ -1199,16 +1499,9 @@ def user_messages_view(request):
                             content=bot_response,
                             is_bot=True
                         )
-                        print(f"DEBUG: Saved bot response: {bot_message.id}")
-                        
                         messages.success(request, 'Message sent!')
                         return redirect(f'{request.path}?chat={chat_id}')
-                        
-                    except BotChat.DoesNotExist:
-                        print(f"DEBUG: BotChat not found for id: {bot_chat_id}")
-                        messages.error(request, 'Chat session not found. Please start a new chat.')
                     except Exception as e:
-                        print(f"DEBUG: Error in bot message: {e}")
                         messages.error(request, 'Error sending message to assistant.')
                 else:
                     # Handle regular message to technician
@@ -1223,7 +1516,6 @@ def user_messages_view(request):
                         messages.success(request, 'Message sent successfully!')
                         return redirect(f'{request.path}?chat={chat_id}')
                     except Contact.DoesNotExist:
-                        print(f"DEBUG: Contact not found for id: {chat_id}")
                         messages.error(request, 'Contact not found.')
             else:
                 messages.error(request, 'Message cannot be empty.')
@@ -1232,12 +1524,51 @@ def user_messages_view(request):
         'user': user,
         'profile': user.profile,
         'title': 'Messages - FixIT',
-        'technicians': technicians,
         'user_chats': user_chats,
         'selected_chat': selected_chat,
         'chat_messages': chat_messages,
+        'related_tickets': related_tickets,
     }
     return render(request, 'dashboard/user_message.html', context)
+@csrf_exempt
+@login_required
+def debug_request_assistance(request):
+    """Debug endpoint to see what's being received"""
+    print("=== DEBUG REQUEST ASSISTANCE ===")
+    print(f"Method: {request.method}")
+    print(f"Content-Type: {request.content_type}")
+    print(f"Body: {request.body}")
+    print(f"User: {request.user}")
+    print(f"POST data: {request.POST}")
+    
+    if request.body:
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            print(f"JSON data: {data}")
+        except Exception as e:
+            print(f"JSON decode error: {e}")
+    
+    return JsonResponse({
+        'success': True,
+        'debug': 'Check server logs',
+        'method': request.method,
+        'content_type': request.content_type,
+        'user': request.user.username
+    })
+#/////////    
+
+def create_contact_from_assistance(user, technician):
+    """Create contact relationship when user requests assistance from technician"""
+    technician_user = technician.user_profile.user
+    contact, created = Contact.objects.get_or_create(
+        user=user,
+        contact_user=technician_user,
+        defaults={
+            'contact_name': f"{technician_user.first_name} {technician_user.last_name}" or technician_user.username
+        }
+    )
+    return contact
+
 
 def generate_bot_response(message):
     """
