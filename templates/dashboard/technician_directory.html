@@ -74,15 +74,15 @@
                     <!-- Search -->
                     <div class="flex-1">
                         <div class="relative">
-                            <input type="text" 
-                                   name="search" 
-                                   placeholder="Search technicians by name, specialty, or bio..." 
+                            <input type="text"
+                                   name="search"
+                                   placeholder="Search technicians by name, specialty, or bio..."
                                    value="{{ search_query }}"
                                    class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] placeholder-[#0245a3]/60 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
                             <i class="fas fa-search absolute right-3 top-3 text-[#0245a3]"></i>
                         </div>
                     </div>
-                    
+
                     <!-- Filter by Service -->
                     <div class="md:w-48">
                         <select name="service" class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
@@ -94,7 +94,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
+
                     <!-- Filter by Availability -->
                     <div class="md:w-40">
                         <select name="availability" class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
@@ -103,7 +103,7 @@
                             <option value="busy" {% if selected_availability == 'busy' %}selected{% endif %}>Busy</option>
                         </select>
                     </div>
-                    
+
                     <!-- Sort Options -->
                     <div class="md:w-48">
                         <select name="sort" class="w-full bg-white/30 border border-[#8fbaf3]/40 rounded-xl py-3 px-4 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
@@ -113,7 +113,7 @@
                             <option value="response_time" {% if selected_sort == 'response_time' %}selected{% endif %}>Fastest Response</option>
                         </select>
                     </div>
-                    
+
                     <!-- Submit Button -->
                     <button type="submit" class="md:w-auto bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl px-6 py-3 hover:opacity-90 transition">
                         Apply Filters
@@ -152,7 +152,7 @@
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center space-x-4">
                             {% if tech.profile_picture_url %}
-                            <img src="{{ tech.profile_picture_url }}" alt="{{ tech.first_name }} {{ tech.last_name }}" 
+                            <img src="{{ tech.profile_picture_url }}" alt="{{ tech.first_name }} {{ tech.last_name }}"
                                  class="w-16 h-16 rounded-full object-cover border-2 border-[#8fbaf3]">
                             {% else %}
                             <div class="w-16 h-16 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-lg border-2 border-[#8fbaf3]">
@@ -185,14 +185,14 @@
                             {{ tech.availability_status }}
                         </div>
                     </div>
-                    
+
                     <!-- Bio -->
                     {% if tech.bio %}
                     <div class="mb-4">
                         <p class="text-[#0245a3] text-sm line-clamp-2">{{ tech.bio|truncatewords:20 }}</p>
                     </div>
                     {% endif %}
-                    
+
                     <div class="mb-4">
                         <h4 class="text-[#0245a3] font-semibold mb-2">Specialties</h4>
                         <div class="flex flex-wrap gap-2">
@@ -203,7 +203,7 @@
                             {% endfor %}
                         </div>
                     </div>
-                    
+
                     <!-- Additional Info -->
                     <div class="space-y-2 text-sm text-[#0245a3] mb-4">
                         <div class="flex justify-between">
@@ -229,7 +229,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    
+
                     <!-- Action Buttons -->
                     <div class="flex space-x-2">
                         {% if tech.availability_status == "Available" %}
@@ -262,7 +262,7 @@
                 </div>
                 {% endfor %}
             </div>
-            
+
             <!-- Pagination -->
             {% if technicians %}
             <div class="flex justify-center mt-8">
@@ -283,7 +283,7 @@
     </div>
 </div>
 
-<!-- Request Assistance Modal
+ <!--Request Assistance Modal-->
 <div id="assistanceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 relative">
         <button type="button" class="modal-close absolute top-4 right-4 text-gray-500 hover:text-gray-700">
@@ -294,12 +294,12 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-[#0245a3] text-sm font-medium mb-2">Title</label>
-                    <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]" 
+                    <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
                            placeholder="Brief description of your issue" required>
                 </div>
                 <div>
                     <label class="block text-[#0245a3] text-sm font-medium mb-2">Description</label>
-                    <textarea name="description" rows="4" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]" 
+                    <textarea name="description" rows="4" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
                               placeholder="Detailed description of your problem..." required></textarea>
                 </div>
                 <div>
@@ -322,18 +322,18 @@
             </div>
         </form>
     </div>
-</div> -->
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Modal system initializing...');
-    
+
     // Remove any existing modal completely
     const existingModal = document.getElementById('assistanceModal');
     if (existingModal) {
         existingModal.remove();
     }
-    
+
     // Create clean modal HTML
     const modalHTML = `
         <div id="assistanceModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;" class="hidden">
@@ -346,12 +346,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="space-y-4">
                         <div>
                             <label class="block text-[#0245a3] text-sm font-medium mb-2">Title</label>
-                            <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]" 
+                            <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
                                    placeholder="Brief description of your issue" required>
                         </div>
                         <div>
                             <label class="block text-[#0245a3] text-sm font-medium mb-2">Description</label>
-                            <textarea name="description" rows="4" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]" 
+                            <textarea name="description" rows="4" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
                                       placeholder="Detailed description of your problem..." required></textarea>
                         </div>
                         <div>
@@ -376,41 +376,41 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
+
     // Get fresh references
     const modal = document.getElementById('assistanceModal');
     const form = document.getElementById('assistanceForm');
     const closeBtn = document.getElementById('modalCloseBtn');
     const cancelBtn = document.getElementById('modalCancelBtn');
-    
+
     let isModalOpen = false;
-    
+
     // Modal control functions
     function openModal(techName, techId) {
         console.log('Opening modal for:', techName);
-        
+
         // Update title
         const title = document.getElementById('modalTitle');
         if (title) {
             title.textContent = `Request Assistance from ${techName}`;
         }
-        
+
         // Store technician ID
         if (form) {
             form.dataset.technicianId = techId;
         }
-        
+
         // Show modal - using both methods for maximum compatibility
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         isModalOpen = true;
-        
+
         console.log('Modal opened successfully');
     }
-    
+
     function closeModal() {
         console.log('Closing modal');
         modal.classList.add('hidden');
@@ -418,74 +418,74 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.style.overflow = '';
         if (form) form.reset();
         isModalOpen = false;
-        
+
         // Clear any stored data
         if (form) {
             delete form.dataset.technicianId;
         }
     }
-    
+
     // Make closeModal available globally
     window.closeModal = closeModal;
-    
+
     // Event listeners with proper cleanup
     function setupEventListeners() {
         // Close button
         if (closeBtn) {
             closeBtn.onclick = closeModal;
         }
-        
+
         // Cancel button
         if (cancelBtn) {
             cancelBtn.onclick = closeModal;
         }
-        
+
         // Click outside to close - but only on the backdrop
         modal.onclick = function(e) {
             if (e.target === modal) {
                 closeModal();
             }
         };
-        
+
         // Escape key to close
         document.onkeydown = function(e) {
             if (e.key === 'Escape' && isModalOpen) {
                 closeModal();
             }
         };
-        
+
         // Form submission
         if (form) {
             form.onsubmit = function(e) {
                 e.preventDefault();
-                
+
                 const technicianId = this.dataset.technicianId;
                 if (!technicianId) {
                     alert('No technician selected');
                     return;
                 }
-                
+
                 const formData = new FormData(this);
                 const title = formData.get('title').trim();
                 const description = formData.get('description').trim();
-                
+
                 if (!title || !description) {
                     alert('Please fill in all required fields');
                     return;
                 }
-                
+
                 // Get CSRF token
                 function getCSRFToken() {
-                    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
                            document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
                 }
-                
+
                 // Submit request
                 const submitBtn = this.querySelector('button[type="submit"]');
                 const originalText = submitBtn.textContent;
                 submitBtn.textContent = 'Sending...';
                 submitBtn.disabled = true;
-                
+
                 fetch('{% url "request_assistance" %}', {
                     method: 'POST',
                     headers: {
@@ -521,28 +521,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             };
         }
-        
+
         // Request assistance buttons
         document.querySelectorAll('.request-assistance-btn').forEach(button => {
             button.onclick = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const techId = this.getAttribute('data-technician-id');
                 const techName = this.getAttribute('data-technician-name');
-                
+
                 if (techId && techName) {
                     openModal(techName, techId);
                 }
-                
+
                 return false;
             };
         });
     }
-    
+
     // Initialize event listeners
     setupEventListeners();
-    
+
     console.log('Modal system ready');
 });
 </script>
@@ -555,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
-    
+
     /* Modal styling - minimal and forceful */
     #assistanceModal {
         display: none !important;
@@ -567,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
         background: rgba(0, 0, 0, 0.5) !important;
         z-index: 10000 !important;
     }
-    
+
     #assistanceModal:not(.hidden) {
         display: flex !important;
         align-items: center !important;

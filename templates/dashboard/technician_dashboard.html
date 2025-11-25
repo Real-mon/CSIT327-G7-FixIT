@@ -68,7 +68,7 @@
                         <div class="space-y-4">
                             <div class="space-y-3">
                                 <h3 class="font-semibold text-white">Popular guides</h3>
-                                
+
                                 <!-- Guide 1 -->
                                 <div class="bg-white/20 rounded-xl p-4 border border-white/20">
                                     <h4 class="font-semibold text-white mb-1">Computer Running Slow?</h4>
@@ -78,7 +78,7 @@
                                         <span>5 min read</span>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Guide 2 -->
                                 <div class="bg-white/20 rounded-xl p-4 border border-white/20">
                                     <h4 class="font-semibold text-white mb-1">Wi-Fi Connection Problems</h4>
@@ -122,32 +122,33 @@
                     </div>
 
                     <!-- Recent Tickets -->
-                    <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-white">Recent Tickets</h2>
-                            <a href="#" class="text-white/80 hover:text-white text-sm font-semibold">View all</a>
-                        </div>
-                        <div class="space-y-4">
-                            <!-- Ticket 1 -->
-                            <div class="bg-white/20 rounded-xl p-4 border border-white/20">
-                                <div class="flex justify-between items-start mb-2">
-                                    <div class="font-semibold text-white">#4321</div>
-                                    <div class="text-white/60 text-sm">2 hours ago</div>
-                                </div>
-                                <h4 class="font-semibold text-white mb-1">Laptop won't boot</h4>
-                                <p class="text-white/70 text-sm">Last update: Technician assigned</p>
-                            </div>
-                            
-                            <!-- Ticket 2 -->
-                            <div class="bg-white/20 rounded-xl p-4 border border-white/20">
-                                <div class="flex justify-between items-start mb-2">
-                                    <div class="font-semibold text-white">#4320</div>
-                                    <div class="text-white/60 text-sm">1 day ago</div>
-                                </div>
-                                <h4 class="font-semibold text-white">Phone screen replacement</h4>
-                            </div>
-                        </div>
+                    <!-- Recent Tickets -->
+<div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-white">Recent Tickets</h2>
+        <a href="#" class="text-white/80 hover:text-white text-sm font-semibold">View all</a>
+    </div>
+    <div class="space-y-4">
+        {% if tickets %}
+            {% for ticket in tickets %}
+            <div class="bg-white/20 rounded-xl p-4 border border-white/20">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="font-semibold text-white">#{{ ticket.id }}</div>
+                    <div class="text-white/60 text-sm">
+                        {{ ticket.created_at|timesince }} ago
                     </div>
+                </div>
+                <h4 class="font-semibold text-white mb-1">{{ ticket.title }}</h4>
+                <p class="text-white/70 text-sm">Status: {{ ticket.status }}</p>
+                <p class="text-white/70 text-sm">{{ ticket.description }}</p>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-white/70">No tickets assigned to you yet.</p>
+        {% endif %}
+    </div>
+</div>
+</div>
                 </div>
             </div>
         </div>
