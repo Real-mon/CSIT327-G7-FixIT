@@ -328,12 +328,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Modal system initializing...');
 
-    // Remove any existing modal completely
-    const existingModal = document.getElementById('assistanceModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-
     // Create clean modal HTML
     const modalHTML = `
         <div id="assistanceModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;" class="hidden">
@@ -343,19 +337,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
                 <h3 class="text-xl font-bold text-[#0245a3] mb-4" id="modalTitle">Request Assistance</h3>
                 <form id="assistanceForm">
+                    <input type="hidden" name="technician_id" id="technicianIdInput">
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Title</label>
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Title *</label>
                             <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
-                                   placeholder="Brief description of your issue" required>
+                                   placeholder="Brief description of your issue" required maxlength="200">
                         </div>
                         <div>
-                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Description</label>
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Description *</label>
                             <textarea name="description" rows="4" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
                                       placeholder="Detailed description of your problem..." required></textarea>
                         </div>
                         <div>
-                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Priority</label>
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Priority *</label>
                             <select name="priority" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
                                 <option value="low">Low</option>
                                 <option value="medium" selected>Medium</option>
@@ -377,6 +372,12 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     `;
 
+    // Remove existing modal if any
+    const existingModal = document.getElementById('assistanceModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
     // Get fresh references
@@ -384,12 +385,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('assistanceForm');
     const closeBtn = document.getElementById('modalCloseBtn');
     const cancelBtn = document.getElementById('modalCancelBtn');
+    const technicianIdInput = document.getElementById('technicianIdInput');
 
     let isModalOpen = false;
 
     // Modal control functions
     function openModal(techName, techId) {
-        console.log('Opening modal for:', techName);
+        console.log('Opening modal for:', techName, 'ID:', techId);
 
         // Update title
         const title = document.getElementById('modalTitle');
@@ -397,12 +399,12 @@ document.addEventListener('DOMContentLoaded', function() {
             title.textContent = `Request Assistance from ${techName}`;
         }
 
-        // Store technician ID
-        if (form) {
-            form.dataset.technicianId = techId;
+        // Store technician ID in hidden input
+        if (technicianIdInput) {
+            technicianIdInput.value = techId;
         }
 
-        // Show modal - using both methods for maximum compatibility
+        // Show modal
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -416,19 +418,40 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.classList.add('hidden');
         modal.style.display = 'none';
         document.body.style.overflow = '';
-        if (form) form.reset();
-        isModalOpen = false;
-
-        // Clear any stored data
         if (form) {
-            delete form.dataset.technicianId;
+            form.reset();
+            technicianIdInput.value = '';
         }
+        isModalOpen = false;
     }
 
     // Make closeModal available globally
     window.closeModal = closeModal;
 
-    // Event listeners with proper cleanup
+    // Get CSRF token function
+    function getCSRFToken() {
+        // Try to get from meta tag
+        let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        // Try to get from hidden input
+        if (!csrfToken) {
+            csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        }
+        
+        // Try to get from cookies
+        if (!csrfToken) {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            csrfToken = cookieValue || '';
+        }
+        
+        console.log('CSRF Token found:', !!csrfToken);
+        return csrfToken;
+    }
+
+    // Event listeners
     function setupEventListeners() {
         // Close button
         if (closeBtn) {
@@ -440,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
             cancelBtn.onclick = closeModal;
         }
 
-        // Click outside to close - but only on the backdrop
+        // Click outside to close
         modal.onclick = function(e) {
             if (e.target === modal) {
                 closeModal();
@@ -458,26 +481,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (form) {
             form.onsubmit = function(e) {
                 e.preventDefault();
+                console.log('Form submission started');
 
-                const technicianId = this.dataset.technicianId;
-                if (!technicianId) {
-                    alert('No technician selected');
-                    return;
-                }
-
+                const technicianId = technicianIdInput.value;
                 const formData = new FormData(this);
                 const title = formData.get('title').trim();
                 const description = formData.get('description').trim();
+                const priority = formData.get('priority');
+
+                console.log('Form data:', { technicianId, title, description, priority });
+
+                // Validation
+                if (!technicianId) {
+                    alert('Error: No technician selected');
+                    return false;
+                }
 
                 if (!title || !description) {
                     alert('Please fill in all required fields');
-                    return;
+                    return false;
                 }
 
-                // Get CSRF token
-                function getCSRFToken() {
-                    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
-                           document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+                const csrfToken = getCSRFToken();
+                
+                if (!csrfToken) {
+                    alert('Security error: Cannot verify request. Please refresh the page and try again.');
+                    return false;
                 }
 
                 // Submit request
@@ -486,39 +515,80 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.textContent = 'Sending...';
                 submitBtn.disabled = true;
 
+                // Show loading state
+                const originalOpacity = submitBtn.style.opacity;
+                submitBtn.style.opacity = '0.7';
+
                 fetch('{% url "request_assistance" %}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
+                    credentials: 'include', // Important for sending cookies
                     body: JSON.stringify({
-                        technician_id: technicianId,
+                        technician_id: parseInt(technicianId), // Ensure it's a number
                         title: title,
                         description: description,
-                        priority: formData.get('priority')
+                        priority: priority
                     })
                 })
                 .then(response => {
-                    if (!response.ok) throw new Error('Network error');
+                    console.log('Response status:', response.status, response.statusText);
+                    
+                    // Check if we got redirected to login (usually 302 or 200 with HTML)
+                    if (response.redirected) {
+                        throw new Error('Authentication required. Please log in again.');
+                    }
+                    
+                    if (!response.ok) {
+                        // Try to get error message from response
+                        return response.text().then(text => {
+                            console.log('Error response text:', text);
+                            // Check if it's HTML (login page)
+                            if (text.includes('<!DOCTYPE html>') || text.includes('Sign In')) {
+                                throw new Error('Session expired. Please log in again.');
+                            }
+                            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                        });
+                    }
+                    
                     return response.json();
                 })
                 .then(data => {
+                    console.log('Response data:', data);
                     if (data.success) {
-                        alert('Request sent successfully!');
+                        alert('✅ Request sent successfully! The technician has been notified.');
                         closeModal();
+                        
+                        // Optional: Redirect to tickets page
+                        setTimeout(() => {
+                            window.location.href = '{% url "my_tickets" %}';
+                        }, 1500);
                     } else {
                         throw new Error(data.error || 'Request failed');
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error: ' + error.message);
+                    console.error('Request failed:', error);
+                    
+                    if (error.message.includes('Authentication') || error.message.includes('Session expired') || error.message.includes('log in')) {
+                        alert('🔐 ' + error.message + ' Redirecting to login...');
+                        setTimeout(() => {
+                            window.location.href = '{% url "login" %}';
+                        }, 1000);
+                    } else {
+                        alert('❌ Error: ' + error.message);
+                    }
                 })
                 .finally(() => {
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
+                    submitBtn.style.opacity = originalOpacity;
                 });
+
+                return false;
             };
         }
 
@@ -531,8 +601,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const techId = this.getAttribute('data-technician-id');
                 const techName = this.getAttribute('data-technician-name');
 
+                console.log('Button clicked - Technician ID:', techId, 'Name:', techName);
+
                 if (techId && techName) {
                     openModal(techName, techId);
+                } else {
+                    console.error('Missing technician data:', { techId, techName });
+                    alert('Error: Could not load technician information');
                 }
 
                 return false;
