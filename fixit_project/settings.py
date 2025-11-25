@@ -210,7 +210,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-here')
  
 # DEBUG is False by default unless explicitly set to True
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
  
 ALLOWED_HOSTS = [
     'csit327-g7-fixit-xdl5.onrender.com',
@@ -286,7 +286,7 @@ DATABASES = {
     "default": dj_database_url.config(
         default=os.getenv("DATABASE_URL"),
         conn_max_age=60,
-        ssl_require=True,
+        ssl_require=False,
     )
 }
  

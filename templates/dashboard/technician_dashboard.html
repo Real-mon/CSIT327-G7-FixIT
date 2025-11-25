@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}User Dashboard - FixIT{% endblock %}
+{% block title %}My Tickets - FixIT{% endblock %}
 
 {% block content %}
-<!-- Animated Background -->
 <div class="absolute inset-0 overflow-hidden">
     <div class="absolute -inset-10 opacity-20">
         <div class="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
@@ -15,32 +14,34 @@
     <div class="flex">
         <!-- Sidebar -->
         <div class="w-64 bg-white/20 backdrop-blur-lg border-r border-[#8fbaf3]/40 min-h-screen p-6">
-            <!-- Logo -->
             <div class="flex items-center space-x-3 mb-8">
                 <div class="w-10 h-10 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-xl flex items-center justify-center">
                     <i class="fas fa-tools text-[#0245a3]"></i>
                 </div>
                 <div>
                     <h1 class="text-xl font-bold text-[#0245a3]">FixIT</h1>
-                    <p class="text-xs text-[#0245a3]">Support Portal</p>
+                    <p class="text-xs text-[#0245a3]">Technician Portal</p>
                 </div>
             </div>
 
-            <!-- Navigation -->
             <nav class="space-y-2">
-                <a href="#" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
+                <a href="{% url 'technician_dashboard' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
                     <i class="fas fa-home w-5"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="#" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                <a href="{% url 'technician_tickets' %}" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
                     <i class="fas fa-ticket-alt w-5"></i>
                     <span>My Tickets</span>
                 </a>
-                <a href="{% url 'technician_profile' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                <a href="{% url 'technician_messages' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                    <i class="fas fa-comments w-5"></i>
+                    <span>Messages</span>
+                </a>
+                <a href="{#}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
                     <i class="fas fa-user w-5"></i>
                     <span>My Profile</span>
                 </a>
-                <a href="#" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                <a href="{% url 'settings' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
                     <i class="fas fa-cog w-5"></i>
                     <span>Settings</span>
                 </a>
@@ -52,104 +53,164 @@
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 p-8">
-            <!-- Welcome Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-[#0245a3] mb-2">Welcome back, {{ user.username }}!</h1>
-                <p class="text-[#0245a3]">Here's what's happening with your support requests</p>
+        <div class="flex-1 p-12 bg-[#f7faff] min-h-screen">
+            <div class="mb-10 text-center">
+                <h1 class="text-4xl font-extrabold text-[#0245a3] mb-3">My Assigned Tickets</h1>
+                <p class="text-[#0245a3]/80 text-lg">Manage and update your assigned support tickets</p>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Left Column - Troubleshooting & Create Ticket -->
-                <div class="space-y-8">
-                    <!-- Recommended Troubleshooting -->
-                    <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
-                        <h2 class="text-xl font-bold text-white mb-4">Recommended Troubleshooting</h2>
-                        <div class="space-y-4">
-                            <div class="space-y-3">
-                                <h3 class="font-semibold text-white">Popular guides</h3>
+            <!-- Stats Overview -->
+            <div class="max-w-6xl mx-auto mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-xl shadow-md border border-[#8fbaf3]/20 p-4 text-center">
+                    <div class="text-2xl font-bold text-[#0245a3]">{{ total_tickets }}</div>
+                    <div class="text-sm text-[#0245a3]/70">Total Assigned</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md border border-[#8fbaf3]/20 p-4 text-center">
+                    <div class="text-2xl font-bold text-[#0245a3]">{{ open_tickets }}</div>
+                    <div class="text-sm text-[#0245a3]/70">Open Tickets</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md border border-[#8fbaf3]/20 p-4 text-center">
+                    <div class="text-2xl font-bold text-[#0245a3]">{{ in_progress_tickets }}</div>
+                    <div class="text-sm text-[#0245a3]/70">In Progress</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md border border-[#8fbaf3]/20 p-4 text-center">
+                    <div class="text-2xl font-bold text-[#0245a3]">{{ resolved_tickets }}</div>
+                    <div class="text-sm text-[#0245a3]/70">Resolved</div>
+                </div>
+            </div>
 
-                                <!-- Guide 1 -->
-                                <div class="bg-white/20 rounded-xl p-4 border border-white/20">
-                                    <h4 class="font-semibold text-white mb-1">Computer Running Slow?</h4>
-                                    <p class="text-white/70 text-sm mb-2">Quick tips to speed up your computer performance</p>
-                                    <div class="flex items-center text-white/60 text-xs">
-                                        <i class="fas fa-clock mr-1"></i>
-                                        <span>5 min read</span>
-                                    </div>
+            <!-- Filter Options -->
+            <div class="max-w-6xl mx-auto mb-6 flex flex-wrap gap-4">
+                <div class="flex items-center space-x-2">
+                    <label class="text-[#0245a3] font-medium">Filter by:</label>
+                    <select class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
+                        <option value="all">All Tickets</option>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="pending">Pending</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label class="text-[#0245a3] font-medium">Sort by:</label>
+                    <select class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="priority">Priority</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="max-w-6xl mx-auto grid grid-cols-1 gap-6">
+                {% for item in ticket_data %}
+                {% with ticket=item.ticket customer=item.customer %}
+                <div class="bg-white rounded-2xl shadow-lg border border-[#8fbaf3]/20 p-6">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                        <!-- Ticket Info -->
+                        <div class="flex-1">
+                            <!-- Ticket Header with Status and Priority -->
+                            <div class="flex flex-wrap items-start justify-between mb-4 gap-2">
+                                <div>
+                                    <h2 class="text-xl font-semibold text-[#0245a3]">{{ ticket.title }}</h2>
+                                    <p class="text-sm text-[#0245a3]/70">Ticket #{{ ticket.id }}</p>
                                 </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="{% if ticket.status == 'open' %}bg-green-100 text-green-800
+                                               {% elif ticket.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                               {% elif ticket.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                               {% else %}bg-gray-100 text-gray-800{% endif %} 
+                                               text-xs font-semibold px-3 py-1 rounded-full">
+                                        {{ ticket.status|title }}
+                                    </span>
+                                    <span class="{% if ticket.priority == 'high' %}bg-red-100 text-red-800
+                                               {% elif ticket.priority == 'medium' %}bg-orange-100 text-orange-800
+                                               {% else %}bg-green-100 text-green-800{% endif %} 
+                                               text-xs font-semibold px-3 py-1 rounded-full">
+                                        {{ ticket.priority|title }} Priority
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Ticket Description -->
+                            <p class="text-sm text-[#0245a3]/80 mb-4">{{ ticket.description }}</p>
 
-                                <!-- Guide 2 -->
-                                <div class="bg-white/20 rounded-xl p-4 border border-white/20">
-                                    <h4 class="font-semibold text-white mb-1">Wi-Fi Connection Problems</h4>
-                                    <p class="text-white/70 text-sm mb-2">Step-by-step guide to resolve connectivity issues</p>
-                                    <div class="flex items-center text-white/60 text-xs">
-                                        <i class="fas fa-clock mr-1"></i>
-                                        <span>10 min read</span>
+                            <!-- Customer Information -->
+                            <div class="mb-4 p-3 bg-[#8fbaf3]/10 rounded-lg border border-[#8fbaf3]/30">
+                                <div class="flex items-center space-x-3">
+                                    {% if customer.profile_picture_url %}
+                                    <img src="{{ customer.profile_picture_url }}" 
+                                        alt="{{ customer.full_name }}" 
+                                        class="w-10 h-10 rounded-full object-cover border-2 border-[#8fbaf3]">
+                                    {% else %}
+                                    <div class="w-10 h-10 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-[#8fbaf3]">
+                                        {{ customer.initials }}
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <p class="text-sm font-semibold text-[#0245a3]">Customer</p>
+                                        <p class="text-sm text-[#0245a3]/80">{{ customer.full_name }}</p>
+                                        <p class="text-xs text-[#0245a3]/60">{{ customer.email }}</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Create Ticket -->
-                    <div class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-2xl p-6 text-white text-center">
-                        <h3 class="text-xl font-bold mb-3">Need Help?</h3>
-                        <p class="text-white/80 mb-4">Create a new support ticket and get expert assistance</p>
-                        <button class="bg-white text-[#0245a3] font-semibold rounded-xl px-6 py-3 hover:bg-white/90 transition transform hover:scale-105">
-                            <i class="fas fa-plus mr-2"></i>
-                            Create Ticket
-                        </button>
+                            <!-- Ticket Metadata -->
+                            <div class="flex flex-wrap gap-4 text-sm text-[#0245a3]/70 pt-3 border-t border-[#8fbaf3]/20">
+                                <span>
+                                    <span class="font-semibold">Category:</span> {{ ticket.category|capfirst }}
+                                </span>
+                                <span>
+                                    <span class="font-semibold">Created:</span> {{ ticket.created_at|date:"M d, Y" }}
+                                </span>
+                                <span>
+                                    <span class="font-semibold">Last Updated:</span> {{ ticket.updated_at|date:"M d, Y" }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Action Panel -->
+                        <div class="md:w-64 flex flex-col space-y-4">
+                            <!-- Status Update -->
+                            <div>
+                                <label class="block text-sm font-medium text-[#0245a3] mb-1">Update Status</label>
+                                <select class="w-full bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-sm text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
+                                    <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Open</option>
+                                    <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="pending" {% if ticket.status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                </select>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="space-y-2">
+                                <a href="{% url 'technician_messages' %}?ticket={{ ticket.id }}"
+                                   class="w-full inline-flex justify-center items-center bg-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl py-2 px-4 text-sm hover:bg-[#8fbaf3]/80 transition">
+                                    <i class="fas fa-envelope mr-2"></i> Message Customer
+                                </a>
+                                
+                                <a href="{#}"
+                                   class="w-full inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-[#1a5bb3] transition">
+                                    <i class="fas fa-eye mr-2"></i> View Details
+                                </a>
+                                
+                                <button class="w-full inline-flex justify-center items-center bg-green-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-green-700 transition">
+                                    <i class="fas fa-check-circle mr-2"></i> Mark Resolved
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Right Column - Stats & Recent Tickets -->
-                <div class="lg:col-span-2 space-y-8">
-                    <!-- Quick Stats -->
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6 text-center">
-                            <div class="text-2xl font-bold text-white mb-1">2</div>
-                            <div class="text-white/70 text-sm">Open Tickets</div>
-                        </div>
-                        <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6 text-center">
-                            <div class="text-2xl font-bold text-white mb-1">8</div>
-                            <div class="text-white/70 text-sm">Resolved This Month</div>
-                        </div>
-                        <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6 text-center">
-                            <div class="text-2xl font-bold text-white mb-1">2.5h</div>
-                            <div class="text-white text-sm">Avg. Response Time</div>
-                        </div>
-                    </div>
-
-                    <!-- Recent Tickets -->
-                    <!-- Recent Tickets -->
-<div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-white">Recent Tickets</h2>
-        <a href="#" class="text-white/80 hover:text-white text-sm font-semibold">View all</a>
-    </div>
-    <div class="space-y-4">
-        {% if tickets %}
-            {% for ticket in tickets %}
-            <div class="bg-white/20 rounded-xl p-4 border border-white/20">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="font-semibold text-white">#{{ ticket.id }}</div>
-                    <div class="text-white/60 text-sm">
-                        {{ ticket.created_at|timesince }} ago
-                    </div>
+                {% endwith %}
+                {% empty %}
+                <div class="col-span-full text-center py-12">
+                    <i class="fas fa-ticket-alt text-6xl text-[#8fbaf3] mb-4"></i>
+                    <h3 class="text-xl font-bold text-[#0245a3] mb-2">No Tickets Assigned</h3>
+                    <p class="text-[#0245a3]/80 mb-4">You don't have any assigned tickets at the moment.</p>
+                    <a href="{% url 'technician_tickets' %}" class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl px-6 py-3 hover:opacity-90 transition">
+                        View Available Tickets
+                    </a>
                 </div>
-                <h4 class="font-semibold text-white mb-1">{{ ticket.title }}</h4>
-                <p class="text-white/70 text-sm">Status: {{ ticket.status }}</p>
-                <p class="text-white/70 text-sm">{{ ticket.description }}</p>
-            </div>
-            {% endfor %}
-        {% else %}
-            <p class="text-white/70">No tickets assigned to you yet.</p>
-        {% endif %}
-    </div>
-</div>
-</div>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>

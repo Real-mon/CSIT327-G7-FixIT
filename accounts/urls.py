@@ -27,6 +27,9 @@ urlpatterns = [
     path('technician/<int:technician_id>/', views.technician_detail_view, name='technician_detail'),
     path('request-assistance/', views.request_assistance_view, name='request_assistance'),
     path('technician/<int:technician_id>/availability/', views.get_technician_availability, name='technician_availability'),
+    path('technician-messages/', views.technician_messages_view, name='technician_messages'),
+    path('technician-tickets/', views.technician_tickets_view, name='technician_tickets'),
+    path('debug-request/', views.debug_request_assistance, name='debug_request'),
 
     #FAQ/Help Center
     path('faq/', views.faq_view, name='faq'),
