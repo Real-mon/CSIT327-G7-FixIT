@@ -1113,17 +1113,63 @@ def check_current_storage(request):
     
     return JsonResponse(config)
 
-from django.shortcuts import render
-from .models import Ticket
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from .models import CreateTicket, Ticket  # or your actual Ticket model
 
+@login_required
 def technician_dashboard_view(request):
-    # Get the logged-in user
+    """
+    Display technician dashboard with assigned tickets and recent activity
+    """
     user = request.user
 
-    # Fetch tickets assigned to this technician (technician_id points to User)
-    tickets = Ticket.objects.filter(technician=user).order_by('-created_at')  # newest first
+    # 1️⃣ Get tickets assigned to this technician via assistance_requests
+    technician_tickets = CreateTicket.objects.filter(
+        assistance_requests__technician__user_profile__user=user
+    ).distinct()
 
-    return render(request, 'dashboard/technician_dashboard.html', {'tickets': tickets})
+    # 2️⃣ Prepare ticket data for template (customer info, etc.)
+    ticket_data = []
+    for ticket in technician_tickets:
+        customer = ticket.user
+        customer_info = {
+            'full_name': customer.get_full_name() or customer.username,
+            'email': customer.email,
+            'profile_picture_url': getattr(customer.profile, 'profile_picture_url', ''),
+            'initials': (
+                (customer.first_name[0] + customer.last_name[0]).upper()
+                if customer.first_name and customer.last_name
+                else customer.username[:2].upper()
+            )
+        }
+        ticket_data.append({
+            'ticket': ticket,
+            'customer': customer_info
+        })
+
+    # 3️⃣ Calculate ticket stats
+    total_tickets = technician_tickets.count()
+    open_tickets = technician_tickets.filter(status='open').count()
+    in_progress_tickets = technician_tickets.filter(status='in_progress').count()
+    resolved_tickets = technician_tickets.filter(status='resolved').count()
+
+    # 4️⃣ Recent Activity (latest 5 tickets)
+    recent_tickets = technician_tickets.order_by('-created_at')[:5]
+
+    context = {
+        'ticket_data': ticket_data,
+        'tickets': recent_tickets,  # for "Recent Activity" loop
+        'total_tickets': total_tickets,
+        'open_tickets': open_tickets,
+        'in_progress_tickets': in_progress_tickets,
+        'resolved_tickets': resolved_tickets,
+        'title': 'Dashboard - FixIT',
+    }
+
+    return render(request, 'dashboard/technician_dashboard.html', context)
+
+
 
 
 
