@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Messages - FixIT{% endblock %}
+{% block title %}Messages - FixIT Technician{% endblock %}
 
 {% block content %}
 <!-- Animated Background -->
@@ -63,18 +63,7 @@
                 <p class="text-[#0245a3]">Communicate with your assigned customers</p>
             </div>
 
-            <!-- Display Messages -->
-            {% if messages %}
-            <div class="mb-4">
-                {% for message in messages %}
-                <div class="{% if message.tags == 'success' %}bg-green-100 border border-green-400 text-green-700{% else %}bg-blue-100 border border-blue-400 text-blue-700{% endif %} px-4 py-3 rounded mb-2">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[600px]">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[600px]">
                 <!-- Chats Sidebar - Customer Focused -->
                 <div class="lg:col-span-1 bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-4">
                     <!-- Search Bar -->
@@ -106,7 +95,7 @@
                         </span>
                     </div>
                     
-                    <!-- Customers List -->
+                    <!-- Customers List - FIXED: Using customer_chats instead of user_chats -->
                     <div class="space-y-2 max-h-[400px] overflow-y-auto">
                         {% for chat in customer_chats %}
                         <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg hover:bg-white/20 transition cursor-pointer {% if selected_chat and selected_chat.id == chat.id %}bg-white/30 border border-[#8fbaf3]{% endif %}"
@@ -138,6 +127,7 @@
                             {% endif %}
                         </div>
                         {% empty %}
+                        <!-- This will only show if customer_chats is empty -->
                         <div class="text-center py-8 text-[#0245a3] opacity-70">
                             <i class="fas fa-users text-3xl mb-2"></i>
                             <p>No customers assigned</p>
@@ -177,7 +167,7 @@
                                 </div>
                             </div>
                             <div class="flex space-x-2">
-                                <a href="{% url 'ticket_details' selected_chat.ticket_id %}" 
+                                <a href="{% url 'technician_ticket_details' selected_chat.ticket_id %}" 
                                    class="bg-white/20 text-[#0245a3] p-3 rounded-lg hover:bg-white/30 transition flex items-center space-x-2">
                                     <i class="fas fa-ticket-alt"></i>
                                     <span class="hidden sm:inline">View Ticket</span>
@@ -230,26 +220,20 @@
                     </div>
                     
                     <!-- Message Input -->
-                    <div class="border-t border-white/20 pt-4">
-                        <form method="POST" class="flex gap-3" id="messageForm">
-                            {% csrf_token %}
-                            <input type="hidden" name="send_message" value="true">
-                            <input type="hidden" name="chat_id" value="{{ selected_chat.id }}">
-                            <div class="flex-1 bg-white/20 border border-white/30 rounded-2xl px-4 py-3 flex items-center">
-                                <button type="button" class="text-[#0245a3] opacity-70 hover:opacity-100 mr-3">
-                                    <i class="fas fa-paperclip"></i>
+                        <div class="border-t border-white/20 pt-4">
+                            <form method="POST" class="flex gap-3" id="messageForm">
+                                {% csrf_token %}
+                                <input type="hidden" name="chat_id" value="{{ selected_chat.id }}">
+                                <div class="flex-1 bg-white/20 border border-white/30 rounded-2xl px-4 py-3 flex items-center">
+                                    <input type="text" name="message_content" placeholder="Type your message to {{ selected_chat.customer_name }}..." 
+                                        class="flex-1 bg-transparent text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none border-none"
+                                        id="messageInput" autocomplete="off">
+                                </div>
+                                <button type="submit" class="bg-[#0245a3] text-white px-6 py-3 rounded-2xl hover:bg-[#8fbaf3] transition">
+                                    <i class="fas fa-paper-plane"></i>
                                 </button>
-                                <input type="text" name="message_content" placeholder="Type your message to {{ selected_chat.customer_name }}..." 
-                                       class="flex-1 bg-transparent text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none border-none"
-                                       id="messageInput" autocomplete="off">
-                                <button type="button" class="text-[#0245a3] opacity-70 hover:opacity-100 ml-3">
-                                    <i class="fas fa-smile"></i>
-                                </button>
-                            </div>
-                            <button type="submit" class="bg-[#0245a3] text-white px-6 py-3 rounded-2xl hover:bg-[#8fbaf3] transition transform hover:scale-105 shadow-lg">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </form>
+                            </form>
+                        </div>
                         
                         <!-- Quick Responses -->
                         <div class="mt-3 flex flex-wrap gap-2">
@@ -276,7 +260,7 @@
                     <div class="text-center py-12 flex-1 flex items-center justify-center">
                         <div>
                             <i class="fas fa-comments text-6xl text-[#0245a3] mb-4 opacity-50"></i>
-                            <h3 class="text-xl font-bold text-[#0245a3] mb-2">Select a Customer</h3>
+                            <h3 class="text-xl font-bold text-[#0245a3] mb-2">Select a Conversation</h3>
                             <p class="text-[#0245a3] opacity-70 mb-4">Choose a customer conversation from the sidebar</p>
                             {% if customer_chats %}
                             <p class="text-sm text-[#0245a3] opacity-60">
@@ -341,5 +325,120 @@
             window.location.reload();
         }
     }, 30000);
+
+    document.addEventListener('DOMContentLoaded', function() {
+    const messageForm = document.getElementById('messageForm');
+    if (messageForm) {
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const messageInput = document.getElementById('messageInput');
+            const chatId = document.querySelector('input[name="chat_id"]').value;
+            
+            if (!messageInput.value.trim()) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('action', 'send_message');
+            formData.append('chat_session_id', chatId);
+            formData.append('content', messageInput.value.trim());
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            fetch('', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Clear input and reload to show new message
+                    messageInput.value = '';
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending message');
+            });
+        });
+    }
+    
+    // Auto-refresh messages every 10 seconds when a chat is selected
+    if (window.location.search.includes('chat=')) {
+        setInterval(function() {
+            window.location.reload();
+        }, 10000);
+    }
+});
+function startTicketChat(ticketId) {
+    console.log('Starting chat for ticket:', ticketId);
+    
+    const formData = new FormData();
+    formData.append('start_ticket_chat', 'true');
+    formData.append('ticket_id', ticketId);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch('', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response:', data);
+        if (data.success) {
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                window.location.href = '?chat=' + data.chat_session_id;
+            }
+        } else {
+            alert('Error: ' + (data.error || 'Unable to start chat'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error starting chat. Please try again.');
+    });
+}
+
+// Start bot chat from ticket
+function startBotChatFromTicket(ticketId) {
+    console.log('Starting bot chat for ticket:', ticketId);
+    
+    const formData = new FormData();
+    formData.append('start_bot_chat', 'true');
+    formData.append('ticket_id', ticketId);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch('', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '?chat=' + data.chat_session_id;
+        } else {
+            alert('Error: ' + (data.error || 'Unable to start bot chat'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error starting bot chat');
+    });
+}
 </script>
 {% endblock %}
