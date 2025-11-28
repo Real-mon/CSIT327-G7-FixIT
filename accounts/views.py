@@ -14,14 +14,17 @@ from django.contrib.auth.models import User
 from django.shortcuts import render
 
 from .models import Ticket, UserSettings
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q, Avg, Count
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.dispatch import receiver
+from django.shortcuts import get_object_or_404
 import json
 from .models import Technician, TechnicianSpecialty, AssistanceRequest
-from .models import User, UserProfile, Message, Contact, BotChat, BotMessage, CreateTicket
+from .models import User, UserProfile, Message, Contact, CreateTicket, ChatSession, Notification, Notifications_Technician, MessageEditHistory
+from django.db.models.signals import post_save
 from django.utils import timezone
 
 
@@ -469,92 +472,1068 @@ def technician_detail_view(request, technician_id):
 
     return render(request, 'dashboard/technician_detail.html', context)
 
+@receiver(post_save, sender=AssistanceRequest)
+def create_chat_session_on_assistance_request(sender, instance, created, **kwargs):
+    """
+    Automatically create a chat session when an assistance request is created
+    """
+    print(f"🔧 CHAT SIGNAL: AssistanceRequest - Created: {created}, Status: {instance.status}, Ticket: {instance.ticket.id if instance.ticket else 'No Ticket'}")
+    
+    # Create chat session for ANY new assistance request, regardless of status
+    if created:
+        try:
+            # Get the technician user
+            technician_user = instance.technician.user_profile.user
+            print(f"🔧 CHAT SIGNAL: Technician: {technician_user.username}, User: {instance.user.username}")
+            
+            # Check if chat session already exists
+            existing_chat = ChatSession.objects.filter(
+                user=instance.user,
+                technician=technician_user,
+                ticket=instance.ticket
+            ).first()
+            
+            if existing_chat:
+                print(f"🔧 CHAT SIGNAL: Chat session already exists - ID: {existing_chat.id}")
+                return
+            
+            # Create new chat session
+            chat_session = ChatSession.objects.create(
+                user=instance.user,
+                technician=technician_user,
+                ticket=instance.ticket,
+                chat_type='user_tech',
+                status='active',
+                last_message_at=timezone.now()
+            )
+            
+            print(f"🔧 CHAT SIGNAL: Created new chat session - ID: {chat_session.id}")
+            
+            # Create initial message
+            initial_content = f"New assistance request: {instance.title}\n\nDescription: {instance.description}\nPriority: {instance.priority}"
+            
+            Message.objects.create(
+                chat_session=chat_session,
+                sender=instance.user,
+                receiver=technician_user,
+                content=initial_content,
+                message_type='user_to_tech'
+            )
+            
+            print(f"🔧 CHAT SIGNAL: Initial message created for chat {chat_session.id}")
+            
+        except Exception as e:
+            print(f"❌ CHAT SIGNAL: Error creating chat session: {e}")
+            import traceback
+            print(f"🔧 CHAT SIGNAL: Traceback: {traceback.format_exc()}")
+            
 @login_required
-def technician_messages_view(request):
+def debug_fix_chats(request):
     """
-    Display technician messages page
+    Debug endpoint to manually create missing chat sessions
     """
+    if not request.user.profile.is_technician:
+        return JsonResponse({'error': 'Not a technician'})
+    
     user = request.user
-
-    # Get technician's assigned tickets to find customer conversations
-    technician_tickets = CreateTicket.objects.filter(
+    print(f"🔧 DEBUG FIX: Starting chat fix for technician {user.username}")
+    
+    # Get all assigned tickets
+    assigned_tickets = CreateTicket.objects.filter(
         assistance_requests__technician__user_profile__user=user
     ).distinct()
-
-    # Get customer chats from assigned tickets
-    customer_chats = []
-    for ticket in technician_tickets:
-        customer = ticket.user
-        customer_chats.append({
-            'id': ticket.id,
-            'customer_name': customer.get_full_name() or customer.username,
-            'ticket_id': ticket.id,
-            'ticket_title': ticket.title,
-            'ticket_status': ticket.status,
-            'unread_count': 0  # You can implement unread message counting
+    
+    print(f"🔧 DEBUG FIX: Found {assigned_tickets.count()} assigned tickets")
+    
+    created_count = 0
+    ticket_details = []
+    
+    for ticket in assigned_tickets:
+        print(f"🔧 DEBUG FIX: Processing ticket {ticket.id}: {ticket.title}")
+        
+        # Check if chat session already exists
+        existing_chat = ChatSession.objects.filter(
+            technician=user,
+            ticket=ticket
+        ).first()
+        
+        if existing_chat:
+            print(f"🔧 DEBUG FIX: Chat already exists for ticket {ticket.id} - Chat ID: {existing_chat.id}")
+            ticket_details.append({
+                'ticket_id': ticket.id,
+                'ticket_title': ticket.title,
+                'chat_exists': True,
+                'chat_id': existing_chat.id
+            })
+        else:
+            # Create new chat session
+            try:
+                chat_session = ChatSession.objects.create(
+                    user=ticket.user,
+                    technician=user,
+                    ticket=ticket,
+                    chat_type='user_tech',
+                    status='active',
+                    last_message_at=timezone.now()
+                )
+                
+                # Create initial message
+                initial_content = f"Support ticket created: {ticket.title}\n\nDescription: {ticket.description}\nCategory: {ticket.category}\nPriority: {ticket.priority}"
+                
+                Message.objects.create(
+                    chat_session=chat_session,
+                    sender=ticket.user,
+                    receiver=user,
+                    content=initial_content,
+                    message_type='user_to_tech',
+                    created_at=timezone.now()
+                )
+                
+                created_count += 1
+                print(f"🔧 DEBUG FIX: Created chat session {chat_session.id} for ticket {ticket.id}")
+                
+                ticket_details.append({
+                    'ticket_id': ticket.id,
+                    'ticket_title': ticket.title,
+                    'chat_exists': False,
+                    'chat_created': True,
+                    'chat_id': chat_session.id
+                })
+                
+            except Exception as e:
+                print(f"❌ DEBUG FIX: Error creating chat for ticket {ticket.id}: {e}")
+                ticket_details.append({
+                    'ticket_id': ticket.id,
+                    'ticket_title': ticket.title,
+                    'error': str(e)
+                })
+    
+    print(f"🔧 DEBUG FIX: Created {created_count} new chat sessions")
+    
+    return JsonResponse({
+        'success': True,
+        'created_count': created_count,
+        'total_tickets': assigned_tickets.count(),
+        'ticket_details': ticket_details,
+        'message': f'Created {created_count} missing chat sessions out of {assigned_tickets.count()} assigned tickets'
+    })
+@login_required
+def debug_technician_data(request):
+    """
+    Comprehensive debug view for technician data
+    """
+    user = request.user
+    
+    data = {
+        'technician': {
+            'username': user.username,
+            'is_technician': user.profile.is_technician,
+        },
+        'assistance_requests': [],
+        'tickets': [],
+        'chat_sessions': []
+    }
+    
+    # Get assistance requests
+    assistance_requests = AssistanceRequest.objects.filter(
+        technician__user_profile__user=user
+    ).select_related('ticket', 'user')
+    
+    for ar in assistance_requests:
+        data['assistance_requests'].append({
+            'id': ar.id,
+            'title': ar.title,
+            'status': ar.status,
+            'ticket_id': ar.ticket.id if ar.ticket else None,
+            'ticket_title': ar.ticket.title if ar.ticket else None,
+            'user': ar.user.username,
         })
+    
+    # Get tickets
+    tickets = CreateTicket.objects.filter(
+        assistance_requests__technician__user_profile__user=user
+    ).distinct()
+    
+    for ticket in tickets:
+        data['tickets'].append({
+            'id': ticket.id,
+            'title': ticket.title,
+            'status': ticket.status,
+            'user': ticket.user.username,
+        })
+    
+    # Get chat sessions
+    chat_sessions = ChatSession.objects.filter(technician=user)
+    
+    for chat in chat_sessions:
+        data['chat_sessions'].append({
+            'id': chat.id,
+            'user': chat.user.username,
+            'ticket_id': chat.ticket.id if chat.ticket else None,
+            'ticket_title': chat.ticket.title if chat.ticket else None,
+            'chat_type': chat.chat_type,
+            'status': chat.status,
+        })
+    
+    return JsonResponse(data)
+   
+@login_required
+@require_http_methods(["GET", "POST"])
+def user_messages_view(request):
+    """
+    Enhanced user messages view with full CRUD operations
+    """
+    user = request.user
+    
+    if request.method == 'POST':
+        return handle_message_post_request(request, user)
+    
+    # GET request - display messages interface
+    return render_user_messages_with_tickets(request, user)
 
+def handle_message_post_request(request, user):
+    """Handle all POST requests for messages"""
+    action = request.POST.get('action')
+    
+    if action == 'send_message':
+        return handle_send_message(request, user)
+    elif action == 'edit_message':
+        return handle_edit_message(request, user)
+    elif action == 'delete_message':
+        return handle_delete_message(request, user)
+    elif action == 'start_chat':
+        return handle_start_chat(request, user)
+    elif action == 'delete_chat':  
+        return handle_delete_chat(request)
+    elif action == 'mark_read':
+        return handle_mark_read(request, user)
+    # ADD THESE TWO NEW CONDITIONS:
+    elif request.POST.get('start_ticket_chat'):
+        return handle_start_ticket_chat(request, user)
+    elif request.POST.get('start_bot_chat'):
+        return handle_start_bot_chat(request, user)
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid action'})
+
+def handle_send_message(request, user):
+    """Handle sending a new message"""
+    try:
+        chat_session_id = request.POST.get('chat_session_id')
+        content = request.POST.get('content', '').strip()
+        
+        if not content:
+            return JsonResponse({'success': False, 'error': 'Message content cannot be empty'})
+        
+        if not chat_session_id:
+            return JsonResponse({'success': False, 'error': 'Chat session ID is required'})
+        
+        # Get chat session
+        chat_session = ChatSession.objects.get(
+            id=chat_session_id,
+            user=user  # Ensure user owns this chat session
+        )
+        
+        # Determine message type and receiver
+        if chat_session.chat_type == 'user_bot':
+            message_type = 'user_to_bot'
+            receiver = None
+            
+            # Create user message
+            message = Message.objects.create(
+                chat_session=chat_session,
+                sender=user,
+                receiver=receiver,
+                content=content,
+                message_type=message_type
+            )
+            
+            # Generate bot response
+            bot_response = generate_bot_response(content)
+            bot_message = Message.objects.create(
+                chat_session=chat_session,
+                content=bot_response,
+                message_type='bot_to_user'
+            )
+            
+            # Update chat session
+            chat_session.last_message_at = timezone.now()
+            chat_session.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Message sent successfully'
+            })
+        else:
+            message_type = 'user_to_tech'
+            receiver = chat_session.technician
+            
+            # Create message
+            message = Message.objects.create(
+                chat_session=chat_session,
+                sender=user,
+                receiver=receiver,
+                content=content,
+                message_type=message_type
+            )
+            
+            # Update chat session
+            chat_session.last_message_at = timezone.now()
+            chat_session.save()
+            
+            # Create notification for technician
+            create_message_notification(chat_session.technician, user, message)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Message sent successfully'
+            })
+        
+    except ChatSession.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Chat session not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def handle_edit_message(request, user):
+    """Handle editing an existing message"""
+    try:
+        message_id = request.POST.get('message_id')
+        new_content = request.POST.get('new_content', '').strip()
+        
+        if not new_content:
+            return JsonResponse({'success': False, 'error': 'Message content cannot be empty'})
+        
+        message = Message.objects.get(id=message_id, sender=user, is_deleted=False)
+        
+        # Save edit history
+        MessageEditHistory.objects.create(
+            message=message,
+            old_content=message.content,
+            new_content=new_content,
+            edited_by=user
+        )
+        
+        # Update message
+        message.content = new_content
+        message.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': serialize_message(message)
+        })
+        
+    except Message.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Message not found or unauthorized'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def handle_delete_message(request, user):
+    """Handle soft deleting a message"""
+    try:
+        message_id = request.POST.get('message_id')
+        message = Message.objects.get(id=message_id, sender=user, is_deleted=False)
+        
+        # Use the soft_delete method if it exists, otherwise implement basic deletion
+        if hasattr(message, 'soft_delete'):
+            message.soft_delete(user)
+        else:
+            message.is_deleted = True
+            message.deleted_at = timezone.now()
+            message.deleted_by = user
+            message.save()
+        
+        return JsonResponse({'success': True, 'message': 'Message deleted successfully'})
+        
+    except Message.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Message not found or unauthorized'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def handle_start_chat(request, user):
+    """Handle starting a new chat session"""
+    try:
+        technician_id = request.POST.get('technician_id')
+        ticket_id = request.POST.get('ticket_id')
+        
+        if technician_id:
+            # Start user-technician chat
+            technician = User.objects.get(id=technician_id, profile__is_technician=True)
+            
+            # Get or create ticket if provided
+            ticket = None
+            if ticket_id:
+                ticket = CreateTicket.objects.get(id=ticket_id, user=user)
+            
+            chat_session, created = ChatSession.objects.get_or_create(
+                user=user,
+                technician=technician,
+                ticket=ticket,
+                defaults={
+                    'chat_type': 'user_tech',
+                    'status': 'active'
+                }
+            )
+            
+            if created:
+                # Create welcome message
+                Message.objects.create(
+                    chat_session=chat_session,
+                    sender=user,
+                    receiver=technician,
+                    content=f"Hello! I'd like to discuss {'ticket #' + str(ticket.id) if ticket else 'a technical issue'}.",
+                    message_type='user_to_tech'
+                )
+            
+            return JsonResponse({
+                'success': True,
+                'chat_session_id': chat_session.id,
+                'redirect_url': f'/user/messages/?chat={chat_session.id}'
+            })
+            
+        else:
+            # Start bot chat
+            chat_session, created = ChatSession.objects.get_or_create(
+                user=user,
+                chat_type='user_bot',
+                defaults={'status': 'active'}
+            )
+            
+            if created:
+                # Create welcome message
+                Message.objects.create(
+                    chat_session=chat_session,
+                    content="Hello! I'm FixIT Assistant 👋 I'm here to help you with common issues and FAQs. How can I assist you today?",
+                    message_type='bot_to_user'
+                )
+            
+            return JsonResponse({
+                'success': True,
+                'chat_session_id': chat_session.id,
+                'redirect_url': f'/user/messages/?chat={chat_session.id}'
+            })
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    
+@login_required
+@require_POST
+@csrf_exempt
+def handle_delete_chat(request):
+    """Handle soft deleting a chat session"""
+    try:
+        chat_session_id = request.POST.get('chat_session_id')
+        
+        if not chat_session_id:
+            return JsonResponse({'success': False, 'error': 'Chat session ID is required'})
+        
+        # Use the same pattern
+        chat_session = ChatSession.objects.filter(
+            Q(user=request.user) | Q(technician=request.user)
+        ).get(id=chat_session_id)
+        
+        # Soft delete by updating status instead of actually deleting
+        chat_session.status = 'deleted'
+        chat_session.deleted_at = timezone.now()
+        chat_session.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Chat session deleted successfully'
+        })
+        
+    except ChatSession.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Chat session not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    
+def handle_mark_read(request, user):
+    """Handle marking messages as read"""
+    try:
+        chat_session_id = request.POST.get('chat_session_id')
+        chat_session = ChatSession.objects.get(id=chat_session_id)
+        
+        # Mark messages as read for this user
+        Message.objects.filter(
+            chat_session=chat_session,
+            receiver=user,
+            is_read=False
+        ).update(is_read=True)
+        
+        return JsonResponse({'success': True})
+        
+    except ChatSession.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Chat session not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+def render_user_messages_with_tickets(request, user):
+    """Render user messages interface with ticket integration"""
+    print(f"🔧 DEBUG: Rendering user messages for {user.username}")
+    
+    # Get user's tickets
+    user_tickets = CreateTicket.objects.filter(user=user).order_by('-created_at')
+    
+    print(f"🔧 DEBUG: Found {user_tickets.count()} user tickets")
+    
+    # AUTO-FIX: Create missing chat sessions for user tickets
+    if user_tickets.exists():
+        created_count = 0
+        for ticket in user_tickets:
+            # Check if chat session exists (user-bot or user-tech)
+            existing_chat = ChatSession.objects.filter(
+                user=user,
+                ticket=ticket
+            ).exists()
+            
+            if not existing_chat:
+                try:
+                    # Create a bot chat session for the ticket
+                    chat_session = ChatSession.objects.create(
+                        user=user,
+                        ticket=ticket,
+                        chat_type='user_bot',  # Start with bot chat
+                        status='active',
+                        last_message_at=timezone.now()
+                    )
+                    
+                    # Create initial message
+                    Message.objects.create(
+                        chat_session=chat_session,
+                        content=f"Hello! I see you have a ticket about: {ticket.title}. How can I help you with this issue?",
+                        message_type='bot_to_user'
+                    )
+                    
+                    created_count += 1
+                    print(f"🔧 USER AUTO-FIX: Created bot chat for ticket {ticket.id}")
+                    
+                except Exception as e:
+                    print(f"❌ USER AUTO-FIX: Error creating chat for ticket {ticket.id}: {e}")
+        
+        if created_count > 0:
+            print(f"🔧 USER AUTO-FIX: Created {created_count} missing chat sessions")
+    
+    # Get user's chat sessions
+    chat_sessions = ChatSession.objects.filter(
+        Q(user=user) | Q(technician=user)
+    ).select_related('user', 'technician', 'ticket').prefetch_related('messages').distinct()
+    
+    print(f"🔧 DEBUG: Found {chat_sessions.count()} chat sessions for user")
+    
+    # Prepare chat data for template
+    user_chats = []
+    for chat in chat_sessions:
+        if chat.chat_type == 'user_bot':
+            contact_name = "FixIT Assistant"
+            is_bot = True
+            ticket_info = None
+        else:
+            if chat.technician:
+                contact_name = f"{chat.technician.first_name} {chat.technician.last_name}".strip() or chat.technician.username
+            else:
+                contact_name = "Unknown Technician"
+            is_bot = False
+            ticket_info = {
+                'id': chat.ticket.id if chat.ticket else None,
+                'title': chat.ticket.title if chat.ticket else 'General Support',
+                'status': chat.ticket.status if chat.ticket else 'open'
+            }
+        
+        # Get unread message count
+        unread_count = chat.messages.filter(
+            receiver=user,
+            is_read=False
+        ).count()
+        
+        user_chats.append({
+            'id': chat.id,
+            'contact_name': contact_name,
+            'is_bot': is_bot,
+            'unread_count': unread_count,
+            'last_message_at': chat.last_message_at,
+            'chat_type': chat.chat_type,
+            'ticket': ticket_info,
+        })
+    
     # Get selected chat
     selected_chat_id = request.GET.get('chat')
     selected_chat = None
     chat_messages = []
-
+    
     if selected_chat_id:
         try:
-            ticket_id = int(selected_chat_id)
-            selected_ticket = get_object_or_404(CreateTicket, id=ticket_id)
-
-            # Verify the technician is assigned to this ticket
-            if selected_ticket in technician_tickets:
-                selected_chat = {
-                    'id': selected_ticket.id,
-                    'customer_name': selected_ticket.user.get_full_name() or selected_ticket.user.username,
-                    'ticket_id': selected_ticket.id,
-                    'ticket_title': selected_ticket.title,
-                    'ticket_status': selected_ticket.status
+            selected_chat_obj = ChatSession.objects.filter(
+                Q(user=user) | Q(technician=user)
+            ).get(id=selected_chat_id)
+            
+            # Prepare selected chat data
+            if selected_chat_obj.chat_type == 'user_bot':
+                contact_name = "FixIT Assistant"
+                is_bot = True
+                ticket_info = None
+            else:
+                if selected_chat_obj.technician:
+                    contact_name = f"{selected_chat_obj.technician.first_name} {selected_chat_obj.technician.last_name}".strip() or selected_chat_obj.technician.username
+                else:
+                    contact_name = "Unknown Technician"
+                is_bot = False
+                ticket_info = {
+                    'id': selected_chat_obj.ticket.id if selected_chat_obj.ticket else None,
+                    'title': selected_chat_obj.ticket.title if selected_chat_obj.ticket else 'General Support',
+                    'status': selected_chat_obj.ticket.status if selected_chat_obj.ticket else 'open'
                 }
-
-                # Get messages for this ticket
-                chat_messages = Message.objects.filter(
-                    Q(ticket=selected_ticket) |
-                    Q(sender=selected_ticket.user, receiver=user) |
-                    Q(sender=user, receiver=selected_ticket.user)
-                ).order_by('timestamp')
-        except ValueError:
+            
+            selected_chat = {
+                'id': selected_chat_obj.id,
+                'contact_name': contact_name,
+                'is_bot': is_bot,
+                'chat_type': selected_chat_obj.chat_type,
+                'ticket': ticket_info,
+            }
+            
+            # Mark messages as read when opening chat
+            Message.objects.filter(
+                chat_session=selected_chat_obj,
+                receiver=user,
+                is_read=False
+            ).update(is_read=True)
+            
+            # Get messages
+            chat_messages = selected_chat_obj.messages.filter(is_deleted=False).order_by('created_at')
+            
+        except ChatSession.DoesNotExist:
             selected_chat = None
-
-    # Handle sending messages
-    if request.method == 'POST' and 'send_message' in request.POST:
-        message_content = request.POST.get('message_content', '').strip()
-        chat_id = request.POST.get('chat_id')
-
-        if message_content and chat_id:
-            try:
-                ticket = CreateTicket.objects.get(id=chat_id)
-                if ticket in technician_tickets:
-                    Message.objects.create(
-                        sender=user,
-                        receiver=ticket.user,
-                        content=message_content,
-                        timestamp=timezone.now(),
-                        ticket=ticket  # If your Message model has a ticket field
-                    )
-                    messages.success(request, 'Message sent successfully!')
-                    return redirect(f'{request.path}?chat={chat_id}')
-            except CreateTicket.DoesNotExist:
-                messages.error(request, 'Ticket not found.')
-
+    
+    # Get available technicians for new chats
+    technicians = Technician.objects.select_related(
+        'user_profile__user'
+    ).filter(is_available=True)
+    
     context = {
         'user': user,
         'profile': user.profile,
         'title': 'Messages - FixIT',
+        'user_chats': user_chats,
+        'user_tickets': user_tickets,  # Add tickets to context
+        'selected_chat': selected_chat,
+        'chat_messages': chat_messages,
+        'technicians': technicians,
+    }
+    
+    return render(request, 'dashboard/user_message.html', context)
+
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def technician_messages_view(request):
+    """
+    Technician messages view with similar CRUD functionality
+    """
+    user = request.user
+    
+    print(f"🔧 DEBUG: Technician Messages View - User: {user.username}")
+    
+    if request.method == 'POST':
+        return handle_technician_message_post(request, user)
+    
+    # GET request - display technician messages
+    return render_technician_messages_interface(request, user)
+
+def handle_technician_message_post(request, user):
+    """Handle technician message POST requests"""
+    action = request.POST.get('action')
+    
+    if action == 'send_message':
+        return handle_technician_send_message(request, user)
+    elif action == 'edit_message':
+        return handle_edit_message(request, user)
+    elif action == 'delete_message':
+        return handle_delete_message(request, user)
+    elif action == 'mark_read':
+        return handle_mark_read(request, user)
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid action'})
+
+def handle_technician_send_message(request, user):
+    """Handle technician sending a message"""
+    try:
+        chat_session_id = request.POST.get('chat_session_id')
+        content = request.POST.get('content', '').strip()
+        
+        if not content:
+            return JsonResponse({'success': False, 'error': 'Message content cannot be empty'})
+        
+        chat_session = ChatSession.objects.get(
+            id=chat_session_id,
+            technician=user  # Ensure technician owns this chat session
+        )
+        
+        # Create message
+        message = Message.objects.create(
+            chat_session=chat_session,
+            sender=user,
+            receiver=chat_session.user,
+            content=content,
+            message_type='tech_to_user'
+        )
+        
+        # Update chat session
+        chat_session.last_message_at = timezone.now()
+        chat_session.save()
+        
+        # Create notification for user
+        create_message_notification(chat_session.user, user, message)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Message sent successfully'
+        })
+        
+    except ChatSession.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Chat session not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+def render_technician_messages_interface(request, user):
+    """Render technician messages interface with ticket integration"""
+    print(f"🔧 DEBUG: Rendering technician messages for {user.username}")
+    
+    # Get technician's assigned tickets
+    technician_tickets = CreateTicket.objects.filter(
+        assistance_requests__technician__user_profile__user=user
+    ).distinct().order_by('-created_at')
+    
+    print(f"🔧 DEBUG: Found {technician_tickets.count()} assigned tickets")
+    
+    # AUTO-FIX: Create missing chat sessions
+    if technician_tickets.exists():
+        created_count = 0
+        for ticket in technician_tickets:
+            # Check if chat session exists
+            existing_chat = ChatSession.objects.filter(
+                technician=user,
+                ticket=ticket
+            ).exists()
+            
+            if not existing_chat:
+                try:
+                    # Create chat session
+                    chat_session = ChatSession.objects.create(
+                        user=ticket.user,
+                        technician=user,
+                        ticket=ticket,
+                        chat_type='user_tech',
+                        status='active',
+                        last_message_at=timezone.now()
+                    )
+                    
+                    # Create initial message
+                    Message.objects.create(
+                        chat_session=chat_session,
+                        sender=ticket.user,
+                        receiver=user,
+                        content=f"Ticket: {ticket.title}\n\n{ticket.description}",
+                        message_type='user_to_tech'
+                    )
+                    
+                    created_count += 1
+                    print(f"🔧 AUTO-FIX: Created chat for ticket {ticket.id}")
+                    
+                except Exception as e:
+                    print(f"❌ AUTO-FIX: Error creating chat for ticket {ticket.id}: {e}")
+        
+        if created_count > 0:
+            print(f"🔧 AUTO-FIX: Created {created_count} missing chat sessions")
+            # Refresh the chat sessions query
+            chat_sessions = ChatSession.objects.filter(
+                technician=user
+            ).select_related('user', 'ticket').prefetch_related('messages').distinct()
+        else:
+            # Use existing query if no new chats were created
+            chat_sessions = ChatSession.objects.filter(
+                technician=user
+            ).select_related('user', 'ticket').prefetch_related('messages').distinct()
+    else:
+        chat_sessions = ChatSession.objects.filter(
+            technician=user
+        ).select_related('user', 'ticket').prefetch_related('messages').distinct()
+    
+    print(f"🔧 DEBUG: Now have {chat_sessions.count()} chat sessions")
+    
+    # Prepare chat data for template
+    customer_chats = []
+    for chat in chat_sessions:
+        customer = chat.user
+        customer_name = f"{customer.first_name} {customer.last_name}".strip() or customer.username
+        
+        # Get unread message count
+        unread_count = chat.messages.filter(
+            receiver=user,
+            is_read=False
+        ).count()
+        
+        customer_chats.append({
+            'id': chat.id,
+            'customer_name': customer_name,
+            'customer_id': customer.id,
+            'ticket_id': chat.ticket.id if chat.ticket else 'N/A',
+            'ticket_title': chat.ticket.title if chat.ticket else 'General Support',
+            'ticket_status': chat.ticket.status if chat.ticket else 'open',
+            'unread_count': unread_count,
+            'last_message_at': chat.last_message_at,
+        })
+    
+    print(f"🔧 DEBUG: Prepared {len(customer_chats)} customer chats")
+    
+    # Get selected chat
+    selected_chat_id = request.GET.get('chat')
+    selected_chat = None
+    chat_messages = []
+    
+    if selected_chat_id:
+        try:
+            selected_chat_obj = ChatSession.objects.get(id=selected_chat_id, technician=user)
+            customer = selected_chat_obj.user
+            customer_name = f"{customer.first_name} {customer.last_name}".strip() or customer.username
+            
+            # Prepare selected chat data
+            selected_chat = {
+                'id': selected_chat_obj.id,
+                'customer_name': customer_name,
+                'customer_id': customer.id,
+                'ticket_id': selected_chat_obj.ticket.id if selected_chat_obj.ticket else 'N/A',
+                'ticket_title': selected_chat_obj.ticket.title if selected_chat_obj.ticket else 'General Support',
+                'ticket_status': selected_chat_obj.ticket.status if selected_chat_obj.ticket else 'open',
+            }
+            
+            # Mark messages as read when opening chat
+            Message.objects.filter(
+                chat_session=selected_chat_obj,
+                receiver=user,
+                is_read=False
+            ).update(is_read=True)
+            
+            # Get messages
+            chat_messages = selected_chat_obj.messages.filter(is_deleted=False).order_by('created_at')
+            
+        except ChatSession.DoesNotExist:
+            selected_chat = None
+    
+    context = {
+        'user': user,
+        'profile': user.profile,
+        'title': 'Messages - FixIT Technician',
         'customer_chats': customer_chats,
+        'technician_tickets': technician_tickets,  # Add tickets to context
         'selected_chat': selected_chat,
         'chat_messages': chat_messages,
     }
-
+    
     return render(request, 'dashboard/technician_messages.html', context)
 
+
+def create_missing_chat_sessions_for_technician(user):
+    """
+    Create chat sessions for any assigned tickets that don't have chats
+    """
+    print(f"🔧 DEBUG: Checking for missing chat sessions for technician {user.username}")
+    
+    # Get assigned tickets without chat sessions
+    assigned_tickets = CreateTicket.objects.filter(
+        assistance_requests__technician__user_profile__user=user
+    ).distinct()
+    
+    created_count = 0
+    for ticket in assigned_tickets:
+        # Check if chat session already exists
+        existing_chat = ChatSession.objects.filter(
+            technician=user,
+            ticket=ticket
+        ).exists()
+        
+        if not existing_chat:
+            # Create new chat session
+            chat_session = ChatSession.objects.create(
+                user=ticket.user,
+                technician=user,
+                ticket=ticket,
+                chat_type='user_tech',
+                status='active'
+            )
+            
+            # Create initial message
+            Message.objects.create(
+                chat_session=chat_session,
+                sender=ticket.user,
+                receiver=user,
+                content=f"Ticket created: {ticket.title} - {ticket.description}",
+                message_type='user_to_tech'
+            )
+            
+            created_count += 1
+            print(f"🔧 DEBUG: Created chat session for ticket {ticket.id}")
+    
+    print(f"🔧 DEBUG: Created {created_count} missing chat sessions")
+    return created_count
+
+
+
+def handle_start_ticket_chat(request, user):
+    """Start a chat for a specific ticket"""
+    try:
+        ticket_id = request.POST.get('ticket_id')
+        ticket = CreateTicket.objects.get(id=ticket_id, user=user)
+        
+        # Check if chat already exists for this ticket
+        existing_chat = ChatSession.objects.filter(
+            user=user,
+            ticket=ticket
+        ).first()
+        
+        if existing_chat:
+            return JsonResponse({
+                'success': True,
+                'chat_session_id': existing_chat.id,
+                'message': 'Chat already exists'
+            })
+        
+        # Create new chat session for the ticket
+        chat_session = ChatSession.objects.create(
+            user=user,
+            ticket=ticket,
+            chat_type='user_tech',  # This will be connected when technician accepts
+            status='active'
+        )
+        
+        # Create initial message
+        Message.objects.create(
+            chat_session=chat_session,
+            sender=user,
+            content=f"Help requested for ticket: {ticket.title}",
+            message_type='user_to_tech'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'chat_session_id': chat_session.id,
+            'message': 'Chat started for ticket'
+        })
+        
+    except CreateTicket.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Ticket not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def handle_start_bot_chat(request, user):
+    """Start or get bot chat, optionally with ticket context"""
+    try:
+        ticket_id = request.POST.get('ticket_id')
+        ticket = None
+        
+        if ticket_id:
+            ticket = CreateTicket.objects.get(id=ticket_id, user=user)
+        
+        # Get or create bot chat session
+        chat_session, created = ChatSession.objects.get_or_create(
+            user=user,
+            chat_type='user_bot',
+            defaults={'status': 'active'}
+        )
+        
+        if created:
+            # Create welcome message
+            Message.objects.create(
+                chat_session=chat_session,
+                content="Hello! I'm FixIT Assistant 👋 I'm here to help you with common issues and FAQs. How can I assist you today?",
+                message_type='bot_to_user'
+            )
+        
+        # If ticket provided, add context to the chat
+        if ticket:
+            Message.objects.create(
+                chat_session=chat_session,
+                sender=user,
+                content=f"I need help with my ticket: {ticket.title} - {ticket.description}",
+                message_type='user_to_bot'
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'chat_session_id': chat_session.id,
+            'redirect_url': f'/user/messages/?chat={chat_session.id}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    
+    
+    
+
+# Utility functions
+def serialize_message(message):
+    """Serialize message for JSON response"""
+    return {
+        'id': message.id,
+        'content': message.content,
+        'sender_name': message.sender.username if message.sender else 'FixIT Assistant',
+        'sender_id': message.sender.id if message.sender else None,
+        'message_type': message.message_type,
+        'created_at': message.created_at.isoformat(),
+        'is_own_message': False,  # This should be set in the template context
+        'can_edit': True,  # This should be determined based on time and permissions
+    }
+
+def create_message_notification(recipient, sender, message):
+    """Create notification for new message"""
+    try:
+        Notification.objects.create(
+            recipient=recipient,
+            sender=sender,
+            message=f"New message from {sender.username}",
+            created_at=timezone.now()
+        )
+    except Exception as e:
+        print(f"Error creating notification: {e}")
+
+# API endpoints for real-time updates
+@login_required
+@csrf_exempt
+def get_chat_messages(request, chat_session_id):
+    """API endpoint to get chat messages"""
+    try:
+        chat_session = ChatSession.objects.filter(
+            Q(user=request.user) | Q(technician=request.user)
+        ).get(id=chat_session_id)
+
+        messages = chat_session.messages.filter(is_deleted=False).order_by('created_at')
+
+        return JsonResponse({
+            'success': True,
+            'messages': [serialize_message(msg) for msg in messages]
+        })
+
+    except ChatSession.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Chat session not found'})
+    
+@login_required
+@csrf_exempt
+def get_unread_count(request):
+    """API endpoint to get unread message count"""
+    if hasattr(request.user, 'profile') and request.user.profile.is_technician:
+        unread_count = Message.objects.filter(
+            receiver=request.user,
+            is_read=False
+        ).count()
+    else:
+        unread_count = Message.objects.filter(
+            receiver=request.user,
+            is_read=False
+        ).count()
+    
+    return JsonResponse({'success': True, 'unread_count': unread_count})
+
+    
 @login_required
 def technician_tickets_view(request):
     """
@@ -1429,169 +2408,10 @@ def change_password_settings(request):
     # GET request - show the form
     return render(request, 'accounts/change_password.html')
 
-@login_required
-def user_messages_view(request):
-    """
-    Display user messages page with chats and messaging functionality
-    """
-    user = request.user
 
-    # Get user's contacts (technicians they've messaged or have tickets with)
-    user_contacts = Contact.objects.filter(user=user)
 
-    # Also get technicians from assistance requests/tickets
-    assistance_technicians = AssistanceRequest.objects.filter(
-        user=user
-    ).select_related('technician__user_profile__user').distinct()
 
-    # Add technicians from assistance requests to contacts if not already there
-    for assistance in assistance_technicians:
-        technician_user = assistance.technician.user_profile.user
-        contact, created = Contact.objects.get_or_create(
-            user=user,
-            contact_user=technician_user,
-            defaults={'contact_name': f"{technician_user.first_name} {technician_user.last_name}"}
-        )
 
-    # Refresh contacts after potential additions
-    user_contacts = Contact.objects.filter(user=user)
-
-    # Get user's bot chats
-    user_bot_chats = BotChat.objects.filter(user=user)
-
-    # Combine both types of chats
-    user_chats = []
-    for contact in user_contacts:
-        contact.is_bot = False
-        # Get the latest message for preview
-        latest_message = Message.objects.filter(
-            (Q(sender=user, receiver=contact.contact_user) |
-             Q(sender=contact.contact_user, receiver=user))
-        ).order_by('-timestamp').first()
-
-        contact.latest_message = latest_message
-        contact.latest_message_time = latest_message.timestamp if latest_message else contact.created_at
-        user_chats.append(contact)
-
-    for bot_chat in user_bot_chats:
-        bot_chat.is_bot = True
-        bot_chat.contact_name = "FixIT Assistant"
-        latest_message = bot_chat.messages.order_by('-timestamp').first()
-        bot_chat.latest_message = latest_message
-        bot_chat.latest_message_time = latest_message.timestamp if latest_message else bot_chat.created_at
-        user_chats.append(bot_chat)
-
-    # Sort chats by latest message time
-    user_chats.sort(key=lambda x: x.latest_message_time, reverse=True)
-
-    # Get selected chat for messaging
-    selected_chat_id = request.GET.get('chat')
-    selected_chat = None
-    chat_messages = []
-    related_tickets = []
-
-    if selected_chat_id:
-        try:
-            # Check if it's a bot chat or contact chat
-            if selected_chat_id.startswith('bot_'):
-                bot_chat_id = selected_chat_id.replace('bot_', '')
-                selected_chat = BotChat.objects.get(id=bot_chat_id, user=user)
-                selected_chat.is_bot = True
-                selected_chat.contact_name = "FixIT Assistant"
-                chat_messages = BotMessage.objects.filter(chat=selected_chat).order_by('timestamp')
-            else:
-                selected_chat = Contact.objects.get(id=selected_chat_id, user=user)
-                selected_chat.is_bot = False
-                chat_messages = Message.objects.filter(
-                    Q(sender=user, receiver=selected_chat.contact_user) |
-                    Q(sender=selected_chat.contact_user, receiver=user)
-                ).order_by('timestamp')
-
-                # Get related tickets for this technician
-                related_tickets = AssistanceRequest.objects.filter(
-                    user=user,
-                    technician__user_profile__user=selected_chat.contact_user
-                ).select_related('ticket')
-
-        except Exception as e:
-            print(f"Error loading chat: {e}")
-            selected_chat = None
-
-    # Handle POST requests
-    if request.method == 'POST':
-        # Handle starting new bot chat
-        if 'start_bot_chat' in request.POST:
-            try:
-                bot_chat = BotChat.objects.create(user=user)
-                BotMessage.objects.create(
-                    chat=bot_chat,
-                    sender=None,
-                    content="Hello! I'm FixIT Assistant 👋 I'm here to help you with common issues and FAQs. How can I assist you today?",
-                    is_bot=True
-                )
-                return JsonResponse({
-                    'success': True,
-                    'chat_id': f'bot_{bot_chat.id}',
-                    'redirect_url': f'{request.path}?chat=bot_{bot_chat.id}'
-                })
-            except Exception as e:
-                return JsonResponse({'success': False, 'error': str(e)})
-
-        # Handle sending new message
-        elif 'send_message' in request.POST:
-            chat_id = request.POST.get('chat_id')
-            message_content = request.POST.get('message_content', '').strip()
-
-            if chat_id and message_content:
-                if chat_id.startswith('bot_'):
-                    # Handle bot message
-                    bot_chat_id = chat_id.replace('bot_', '')
-                    try:
-                        bot_chat = BotChat.objects.get(id=bot_chat_id, user=user)
-                        user_message = BotMessage.objects.create(
-                            chat=bot_chat,
-                            sender=user,
-                            content=message_content,
-                            is_bot=False
-                        )
-                        bot_response = generate_bot_response(message_content)
-                        bot_message = BotMessage.objects.create(
-                            chat=bot_chat,
-                            sender=None,
-                            content=bot_response,
-                            is_bot=True
-                        )
-                        messages.success(request, 'Message sent!')
-                        return redirect(f'{request.path}?chat={chat_id}')
-                    except Exception as e:
-                        messages.error(request, 'Error sending message to assistant.')
-                else:
-                    # Handle regular message to technician
-                    try:
-                        contact = Contact.objects.get(id=chat_id, user=user)
-                        Message.objects.create(
-                            sender=user,
-                            receiver=contact.contact_user,
-                            content=message_content,
-                            timestamp=timezone.now()
-                        )
-                        messages.success(request, 'Message sent successfully!')
-                        return redirect(f'{request.path}?chat={chat_id}')
-                    except Contact.DoesNotExist:
-                        messages.error(request, 'Contact not found.')
-            else:
-                messages.error(request, 'Message cannot be empty.')
-
-    context = {
-        'user': user,
-        'profile': user.profile,
-        'title': 'Messages - FixIT',
-        'user_chats': user_chats,
-        'selected_chat': selected_chat,
-        'chat_messages': chat_messages,
-        'related_tickets': related_tickets,
-    }
-    return render(request, 'dashboard/user_message.html', context)
 @csrf_exempt
 @login_required
 def debug_request_assistance(request):
@@ -1630,6 +2450,25 @@ def create_contact_from_assistance(user, technician):
         }
     )
     return contact
+
+def start_bot_chat(request):
+       # Use the unified chat system
+    chat_session, created = ChatSession.objects.get_or_create(
+        user=request.user,
+        chat_type='user_bot',
+        defaults={'status': 'active'}
+    )
+    
+    # Create welcome message if this is a new chat
+    if created:
+        Message.objects.create(
+            chat_session=chat_session,
+            content="Hello! I'm FixIT Assistant 👋 I'm here to help you with common issues and FAQs. How can I assist you today?",
+            message_type='bot_to_user'
+        )
+    
+    return redirect(f'/user/messages/?chat={chat_session.id}')
+
 
 
 def generate_bot_response(message):
@@ -1823,3 +2662,30 @@ def delete_ticket(request, ticket_id):
     ticket = get_object_or_404(CreateTicket, id=ticket_id, user=request.user)
     ticket.delete()
     return redirect("my_tickets")  # redirect to your ticket list page
+
+@login_required
+def ticket_details_view(request, ticket_id):
+    """View ticket details for regular users"""
+    ticket = get_object_or_404(CreateTicket, id=ticket_id, user=request.user)
+    
+    context = {
+        'ticket': ticket,
+        'title': f'Ticket #{ticket.id} - {ticket.title}'
+    }
+    return render(request, 'dashboard/ticket_details.html', context)
+
+@login_required
+def technician_ticket_details_view(request, ticket_id):
+    """View ticket details for technicians"""
+    ticket = get_object_or_404(
+        CreateTicket, 
+        id=ticket_id,
+        assistance_requests__technician__user_profile__user=request.user
+    )
+    
+    context = {
+        'ticket': ticket,
+        'title': f'Ticket #{ticket.id} - {ticket.title}',
+        'is_technician': True
+    }
+    return render(request, 'dashboard/ticket_details.html', context)

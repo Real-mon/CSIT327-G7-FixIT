@@ -31,12 +31,19 @@ urlpatterns = [
     path('technician-messages/', views.technician_messages_view, name='technician_messages'),
     path('technician-tickets/', views.technician_tickets_view, name='technician_tickets'),
     path('debug-request/', views.debug_request_assistance, name='debug_request'),
-
+    path('api/delete-message/', views.handle_delete_message, name='delete_message'),
+    path('user/chat/delete/', views.handle_delete_chat, name='user_delete_chat'),
+    path('technician/chat/delete/', views.handle_delete_chat, name='technician_delete_chat'),
+    path('api/chat/<int:chat_session_id>/messages/', views.get_chat_messages, name='get_chat_messages'),
+    path('api/messages/unread-count/', views.get_unread_count, name='get_unread_count'),
+    path('technician/debug/fix-chats/', views.debug_fix_chats, name='debug_fix_chats'),
+    # path('technician/debug/data/', views.debug_technician_data, name='debug_technician_data'),
     #FAQ/Help Center
     path('faq/', views.faq_view, name='faq'),
 
     #History
     path('profile/history/', views.ticket_history, name='ticket_history'),
+    path('technician/debug/data/', views.debug_technician_data, name='debug_technician_data'),
 
 
     #Settings
@@ -48,8 +55,11 @@ urlpatterns = [
     path('create-ticket/', views.create_ticket, name='create_ticket'),
     path('my-tickets/', views.my_tickets, name='my_tickets'),  #VIEW
 path('available-technicians/', views.available_technicians, name='available-technicians'),
+    
+    path('ticket/<int:ticket_id>/', views.ticket_details_view, name='ticket_details'),
+    path('technician/ticket/<int:ticket_id>/', views.technician_ticket_details_view, name='technician_ticket_details'),
 
-    #DELTE TICKET
+    #DELETE TICKET
 path('ticket/<int:ticket_id>/delete/', views.delete_ticket, name='delete_ticket'),
 
 ]

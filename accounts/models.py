@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+from django.conf import settings
 
 class UserProfile(models.Model):
     """
@@ -210,27 +212,7 @@ class AssistanceRequest(models.Model):
         verbose_name = 'Assistance Request'
         verbose_name_plural = 'Assistance Requests'
 
-# Signals
-# @receiver(post_save, sender=User)
-# def create_user_profile(sender, instance, created, **kwargs):
-#    """Create UserProfile when a new User is created"""
-#    if created:
-#        UserProfile.objects.create(user=instance)
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    """Save UserProfile when User is saved"""
-    if hasattr(instance, 'profile'):
-        instance.profile.save()
-
-@receiver(post_save, sender=UserProfile)
-def create_technician_profile(sender, instance, created, **kwargs):
-    """Create Technician profile when UserProfile is marked as technician"""
-    if instance.is_technician:
-        Technician.objects.get_or_create(user_profile=instance)
-
-
-#SPRINT 2
+# SPRINT 2 Models
 PRIORITY_CHOICES = [
     ('Low', 'Low'),
     ('Medium', 'Medium'),
@@ -250,7 +232,7 @@ class Ticket(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='ticket_assigned',  # changed
+        related_name='ticket_assigned',
         db_column='technician_id'
     )
 
@@ -260,8 +242,8 @@ class Ticket(models.Model):
     priority = models.CharField(
         max_length=10,
         choices=PRIORITY_CHOICES,
-        default='Medium'  # ✅ important for existing rows
-    )  # ✅ New field
+        default='Medium'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -271,21 +253,18 @@ class Ticket(models.Model):
     def __str__(self):
         return f"{self.title} ({self.status})"
 
-
-
-
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
     email_notifications = models.BooleanField(default=True)
     sms_notifications = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
+    
     class Meta:
-        db_table = 'user_settings'  # Use your existing Supabase table name
+        db_table = 'user_settings'
 
     def __str__(self):
         return f"{self.user.username}'s Settings"
-    
-    
+
 class Contact(models.Model):
     """
     Model to store user's contacts (technicians they can message) and bot chats
@@ -293,7 +272,7 @@ class Contact(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_contacts')
     contact_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='added_as_contact', null=True, blank=True)
     contact_name = models.CharField(max_length=255)
-    is_bot_chat = models.BooleanField(default=False)  # New field to identify bot chats
+    is_bot_chat = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -302,63 +281,186 @@ class Contact(models.Model):
     
     def __str__(self):
         return f"{self.user.username} -> {self.contact_name}"
+
+class ChatSession(models.Model):
+    """
+    Unified chat session model for user-technician conversations
+    """
+    CHAT_TYPES = [
+        ('user_tech', 'User-Technician'),
+        ('user_bot', 'User-Bot'),
+    ]
     
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('closed', 'Closed'),
+        ('archived', 'Archived'),
+        ('deleted', 'Deleted'),  # ADD THIS FOR SOFT DELETE
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_chat_sessions')
+    technician = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='technician_chat_sessions',
+        null=True,
+        blank=True
+    )
+    ticket = models.ForeignKey(
+        'CreateTicket',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='chat_sessions'
+    )
+    chat_type = models.CharField(max_length=20, choices=CHAT_TYPES, default='user_tech')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_message_at = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)  # ADD THIS FOR SOFT DELETE
+    
+    class Meta:
+        db_table = 'chat_sessions'
+        unique_together = ['user', 'technician', 'ticket']
+        ordering = ['-last_message_at', '-created_at']
+    
+    def __str__(self):
+        if self.chat_type == 'user_bot':
+            return f"Bot Chat - {self.user.username}"
+        else:
+            tech_name = self.technician.get_full_name() if self.technician else "No Technician"
+            return f"Chat: {self.user.username} - {tech_name} (Ticket: {self.ticket.id if self.ticket else 'No Ticket'})"
+
+    @property
+    def other_party_name(self):
+        """Get the name of the other party in the chat"""
+        if self.chat_type == 'user_bot':
+            return "FixIT Assistant"
+        elif self.technician:
+            return f"{self.technician.first_name} {self.technician.last_name}".strip() or self.technician.username
+        return "Unknown"
+
+    @property
+    def unread_count_for_user(self):
+        """Count unread messages for the user"""
+        return self.messages.filter(is_read=False, receiver=self.user).count()
+
+    @property
+    def unread_count_for_technician(self):
+        """Count unread messages for the technician"""
+        return self.messages.filter(is_read=False, receiver=self.technician).count()
+
+    def get_last_message(self):
+        """Get the most recent message in the chat"""
+        return self.messages.filter(is_deleted=False).order_by('-created_at').first()
+
+    def mark_messages_as_read(self, user):
+        """Mark all messages as read for a user"""
+        self.messages.filter(receiver=user, is_read=False).update(is_read=True)
 
 class Message(models.Model):
     """
-    Model to store messages between users
+    Enhanced Message model with full CRUD functionality
     """
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    MESSAGE_TYPES = [
+        ('user_to_tech', 'User to Technician'),
+        ('tech_to_user', 'Technician to User'),
+        ('user_to_bot', 'User to Bot'),
+        ('bot_to_user', 'Bot to User'),
+    ]
+    
+    chat_session = models.ForeignKey(
+        ChatSession,
+        on_delete=models.CASCADE,
+        related_name='messages',
+        null=True,  # Add this temporarily
+        blank=True  
+    )
+    sender = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='sent_messages',
+        null=True,
+        blank=True
+    )
+    receiver = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='received_messages',
+        null=True,
+        blank=True
+    )
     content = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     is_read = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='deleted_messages'
+    )
     
     class Meta:
         db_table = 'messages'
-        ordering = ['timestamp']
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['chat_session', 'created_at']),
+            models.Index(fields=['sender', 'receiver', 'created_at']),
+        ]
     
     def __str__(self):
-        return f"{self.sender.username} to {self.receiver.username}: {self.content[:50]}"
-    
-    
-class BotChat(models.Model):
+        sender_name = self.sender.username if self.sender else 'System'
+        receiver_name = self.receiver.username if self.receiver else 'Unknown'
+        return f"{sender_name} to {receiver_name}: {self.content[:50]}"
+
+    def soft_delete(self, user):
+        """Soft delete the message"""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.save()
+
+    def update_content(self, new_content, user):
+        """Update message content with permission check"""
+        if self.sender != user:
+            raise PermissionError("You can only edit your own messages")
+        
+        self.content = new_content
+        self.save()
+
+class MessageEditHistory(models.Model):
     """
-    Model to store bot chat sessions
+    Track message edit history
     """
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bot_chats')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='edit_history')
+    old_content = models.TextField()
+    new_content = models.TextField()
+    edited_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    edited_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        db_table = 'bot_chats'
-    
-    def __str__(self):
-        return f"Bot Chat - {self.user.username}"
+        db_table = 'message_edit_history'
+        ordering = ['-edited_at']
 
-class BotMessage(models.Model):
+class Attachment(models.Model):
     """
-    Model to store messages in bot chats
+    Model for message attachments
     """
-    chat = models.ForeignKey(BotChat, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    content = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-    is_bot = models.BooleanField(default=False)
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='message_attachments/%Y/%m/%d/')
+    file_name = models.CharField(max_length=255)
+    file_size = models.IntegerField()
+    file_type = models.CharField(max_length=100)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        db_table = 'bot_messages'
-        ordering = ['timestamp']
-    
-    def __str__(self):
-        sender = "Bot" if self.is_bot else self.sender.username
-        return f"{sender}: {self.content[:50]}"
-
-
- #Create Ticket
-from django.db import models
-from django.conf import settings  # If you use custom user models
-
+        db_table = 'message_attachments'
 
 class CreateTicket(models.Model):
     PRIORITY_CHOICES = [
@@ -375,9 +477,7 @@ class CreateTicket(models.Model):
         ('other', 'Other'),
     ]
 
-    # Link ticket to the user who created it (assuming a User model exists)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-
     title = models.CharField(max_length=255)
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
@@ -389,21 +489,17 @@ class CreateTicket(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='create_ticket_assigned',  # changed
+        related_name='create_ticket_assigned',
     )
 
     def __str__(self):
         return f"Ticket {self.id}: {self.title}"
 
-
-from django.db import models
-from django.contrib.auth.models import User
-
 class Notification(models.Model):
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications', null=True, blank=True)
     ticket = models.ForeignKey('CreateTicket', on_delete=models.CASCADE, null=True, blank=True)
-    message = models.TextField()  # e.g., "Technician replied to your ticket"
+    message = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -413,8 +509,6 @@ class Notification(models.Model):
     def __str__(self):
         return f"Notification to {self.recipient.username}: {self.message}"
 
-
-#TECHNICIAN NOTIFICATION
 class Notifications_Technician(models.Model):
     technician = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     message = models.CharField(max_length=255)
@@ -425,4 +519,44 @@ class Notifications_Technician(models.Model):
     class Meta:
         db_table = 'notifications_technician'
 
+# Remove duplicate BotChat and BotMessage models since we're using ChatSession and Message
 
+# Signals
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    """Save UserProfile when User is saved"""
+    if hasattr(instance, 'profile'):
+        instance.profile.save()
+
+@receiver(post_save, sender=UserProfile)
+def create_technician_profile(sender, instance, created, **kwargs):
+    """Create Technician profile when UserProfile is marked as technician"""
+    if instance.is_technician:
+        Technician.objects.get_or_create(user_profile=instance)
+
+@receiver(post_save, sender=AssistanceRequest)
+def create_chat_session_on_assistance_request(sender, instance, created, **kwargs):
+    """
+    Automatically create a chat session when an assistance request is created
+    """
+    if created and instance.status == 'accepted':
+        # Create chat session for user-technician communication
+        chat_session, created = ChatSession.objects.get_or_create(
+            user=instance.user,
+            technician=instance.technician.user_profile.user,
+            ticket=instance.ticket,
+            defaults={
+                'chat_type': 'user_tech',
+                'status': 'active'
+            }
+        )
+        
+        # Create initial message
+        if created:
+            Message.objects.create(
+                chat_session=chat_session,
+                sender=instance.user,
+                receiver=instance.technician.user_profile.user,
+                content=f"Assistance request created for ticket: {instance.ticket.title}",
+                message_type='user_to_tech'
+            )
