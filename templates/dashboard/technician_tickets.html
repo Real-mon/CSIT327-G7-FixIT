@@ -79,27 +79,76 @@
                 </div>
             </div>
 
-            <!-- Filter Options -->
-            <div class="max-w-6xl mx-auto mb-6 flex flex-wrap gap-4">
-                <div class="flex items-center space-x-2">
-                    <label class="text-[#0245a3] font-medium">Filter by:</label>
-                    <select class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
-                        <option value="all">All Tickets</option>
-                        <option value="open">Open</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="pending">Pending</option>
-                        <option value="resolved">Resolved</option>
-                    </select>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <label class="text-[#0245a3] font-medium">Sort by:</label>
-                    <select class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="priority">Priority</option>
-                    </select>
-                </div>
-            </div>
+ <!-- Filter Options -->
+<form method="get" class="max-w-6xl mx-auto mb-6 flex flex-wrap gap-4">
+
+    <!-- Category Filter -->
+    <div class="flex items-center space-x-2">
+        <label class="text-[#0245a3] font-medium">Category:</label>
+        <select name="category" onchange="this.form.submit()"
+                class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
+
+            <!-- ALL CATEGORIES OPTION -->
+            <option value="All"
+                {% if not selected_category or selected_category == 'All' %}selected{% endif %}>
+                All Categories
+            </option>
+
+            <!-- CATEGORY OPTIONS -->
+            {% for category in categories %}
+                <option value="{{ category }}"
+                    {% if selected_category == category %}selected{% endif %}>
+                    {{ category }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="flex items-center space-x-2">
+        <label class="text-[#0245a3] font-medium">Status:</label>
+        <select name="status" onchange="this.form.submit()"
+                class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
+
+            {% for value, label in status_choices %}
+                <option value="{{ value }}"
+                    {% if selected_status == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Sort Filter -->
+    <div class="flex items-center space-x-2">
+        <label class="text-[#0245a3] font-medium">Sort by:</label>
+        <select name="sort" onchange="this.form.submit()"
+                class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
+
+            {% for value, label in sort_choices %}
+                <option value="{{ value }}"
+                    {% if selected_sort == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+</form>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             <div class="max-w-6xl mx-auto grid grid-cols-1 gap-6">
                 {% for item in ticket_data %}
@@ -181,22 +230,35 @@
                                 </select>
                             </div>
 
-                            <!-- Action Buttons -->
-                            <div class="space-y-2">
-                                <a href="{% url 'technician_messages' %}?ticket={{ ticket.id }}"
-                                   class="w-full inline-flex justify-center items-center bg-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl py-2 px-4 text-sm hover:bg-[#8fbaf3]/80 transition">
-                                    <i class="fas fa-envelope mr-2"></i> Message Customer
-                                </a>
-                                
-                                <a href="{#}"
-                                   class="w-full inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-[#1a5bb3] transition">
-                                    <i class="fas fa-eye mr-2"></i> View Details
-                                </a>
-                                
-                                <button class="w-full inline-flex justify-center items-center bg-green-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-green-700 transition">
-                                    <i class="fas fa-check-circle mr-2"></i> Mark Resolved
-                                </button>
-                            </div>
+                          <!-- Action Buttons -->
+<div class="space-y-2">
+
+    <!-- Message Customer -->
+    <a href="{% url 'technician_messages' %}?ticket={{ ticket.id }}"
+       class="w-full inline-flex justify-center items-center bg-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl py-2 px-4 text-sm hover:bg-[#8fbaf3]/80 transition">
+        <i class="fas fa-envelope mr-2"></i> Message Customer
+    </a>
+
+    <!-- View Details -->
+    <a href="#"
+       class="w-full inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-[#1a5bb3] transition">
+        <i class="fas fa-eye mr-2"></i> View Details
+    </a>
+
+    {% with ticket.assistance_requests.first as ar %}
+        <!-- ALWAYS SHOW Mark Resolved -->
+        <form method="POST" action="#">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-full bg-green-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-green-700 transition">
+                Mark Resolved
+            </button>
+        </form>
+    {% endwith %}
+
+</div>
+
+
                         </div>
                     </div>
                 </div>
