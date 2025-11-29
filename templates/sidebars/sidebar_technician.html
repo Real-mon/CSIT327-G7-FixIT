@@ -1,0 +1,77 @@
+<!-- TECHNICIAN SIDEBAR -->
+<aside class="fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] p-6 overflow-y-auto 
+               border-r border-[#8fbaf3]/40 bg-white/90 backdrop-blur-lg z-[1000]">
+
+    <!-- Header / Logo -->
+    <div class="flex items-center space-x-3 mb-8">
+        <div class="w-10 h-10 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-xl 
+                    flex items-center justify-center">
+            <i class="fas fa-tools text-[#0245a3]"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-bold text-[#0245a3]">FixIT</h1>
+            <p class="text-xs text-[#0245a3]">Technician Portal</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    {% with current=request.resolver_match.url_name|default:'' %}
+    <nav class="space-y-2">
+
+        <a href="{% url 'technician_dashboard' %}"
+           class="flex items-center space-x-3 px-4 py-3 rounded-xl transition 
+                  {% if current == 'technician_dashboard' %}
+                       bg-white/20 text-[#0245a3] font-semibold
+                  {% else %}
+                       text-[#0245a3] hover:bg-white/40
+                  {% endif %}">
+            <i class="fas fa-home w-5"></i>
+            <span>Dashboard</span>
+        </a>
+
+        <a href="{% url 'technician_tickets' %}"
+           class="flex items-center space-x-3 px-4 py-3 rounded-xl transition 
+                  {% if current == 'technician_tickets' %}
+                       bg-white/20 text-[#0245a3] font-semibold
+                  {% else %}
+                       text-[#0245a3] hover:bg-white/40
+                  {% endif %}">
+            <i class="fas fa-ticket-alt w-5"></i>
+            <span>My Tickets</span>
+        </a>
+
+        <a href="{% url 'technician_messages' %}"
+           class="flex items-center space-x-3 px-4 py-3 rounded-xl transition 
+                  {% if current == 'technician_messages' %}
+                       bg-white/20 text-[#0245a3] font-semibold
+                  {% else %}
+                       text-[#0245a3] hover:bg-white/40
+                  {% endif %}">
+            <i class="fas fa-comments w-5"></i>
+            <span>Messages</span>
+        </a>
+
+        <a href="{% url 'technician_settings' %}"
+           class="flex items-center space-x-3 px-4 py-3 rounded-xl transition 
+                  {% if current == 'technician_settings' %}
+                       bg-white/20 text-[#0245a3] font-semibold
+                  {% else %}
+                       text-[#0245a3] hover:bg-white/40
+                  {% endif %}">
+            <i class="fas fa-cog w-5"></i>
+            <span>Settings</span>
+        </a>
+
+        <a href="{% url 'logout' %}"
+           class="flex items-center space-x-3 px-4 py-3 rounded-xl transition text-[#0245a3] hover:bg-white/40">
+            <i class="fas fa-sign-out-alt w-5"></i>
+            <span class="text-red-600">Logout</span>
+        </a>
+
+    </nav>
+    {% endwith %}
+</aside>
+
+<style>
+    body { padding-left: 16rem; }
+</style>

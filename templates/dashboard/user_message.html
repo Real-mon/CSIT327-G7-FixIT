@@ -3,14 +3,6 @@
 {% block title %}Messages - FixIT{% endblock %}
 
 {% block content %}
-<!-- Animated Background -->
-<div class="absolute inset-0 overflow-hidden">
-    <div class="absolute -inset-10 opacity-20">
-        <div class="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-        <div class="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-r from-[#bdf1f6] to-[#8fbaf3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
-    </div>
-</div>
-
 <div class="relative min-h-screen">
     <div class="flex">
         <!-- Sidebar -->
@@ -28,7 +20,7 @@
 
             <!-- Navigation -->
             <nav class="space-y-2">
-                <a href="{% url 'dashboard' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                <a href="{% url 'dashboard' %}" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
                     <i class="fas fa-home w-5"></i>
                     <span>Dashboard</span>
                 </a>
@@ -40,15 +32,13 @@
                     <i class="fas fa-user-cog w-5"></i>
                     <span>Technicians</span>
                 </a>
-                <a href="{% url 'user_message' %}" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
+                <!-- Messages Button Added Here -->
+                <a href="{% url 'user_message' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
                     <i class="fas fa-comments w-5"></i>
                     <span>Messages</span>
                 </a>
-                <a href="{% url 'user_profile' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
-                    <i class="fas fa-user w-5"></i>
-                    <span>My Profile</span>
-                </a>
-                <a href="{% url 'settings' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                <!-- Settings -->
+                <a href="{% url 'user_settings' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
                     <i class="fas fa-cog w-5"></i>
                     <span>Settings</span>
                 </a>
@@ -114,7 +104,7 @@
                     <!-- Chats List -->
                     <div class="space-y-2 max-h-[400px] overflow-y-auto">
                         {% for chat in user_chats %}
-                        <div class="flex justify-between items-center p-3 bg-white/10 rounded-lg hover:bg-white/20 transition cursor-pointer {% if selected_chat and selected_chat.id == chat.id %}bg-white/30 border border-[#8fbaf3]{% endif %}"
+                        <div class="group flex justify-between items-center p-3 bg-white/10 rounded-lg hover:bg-white/20 transition cursor-pointer {% if selected_chat and selected_chat.id == chat.id %}bg-white/30 border border-[#8fbaf3]{% endif %}"
                              onclick="window.location.href='?chat={{ chat.id }}'">
                             <div class="flex-1">
                                 <div class="flex items-center space-x-3">
@@ -137,7 +127,8 @@
                                 </div>
                             </div>
                             {% if not chat.is_bot %}
-                            <button onclick="event.stopPropagation(); deleteChat({{ chat.id }})" class="text-red-500 hover:text-red-700 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" onclick="event.stopPropagation(); deleteChat('{{ chat.id }}')" class="text-red-500 hover:text-red-700 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+
                                 <i class="fas fa-trash text-sm"></i>
                             </button>
                             {% endif %}

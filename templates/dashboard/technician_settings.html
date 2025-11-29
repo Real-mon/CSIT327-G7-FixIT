@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block sidebar %}
+{% include 'sidebars/sidebar_technician.html' %}
+{% endblock %}
+
+{% block content %}
+
+<div class="relative min-h-screen">
+    <div class="flex">
+        <!-- Sidebar rendered via base.html block -->
+
+        <!-- Main Content -->
+        <div class="flex-1 p-12 pt-8 bg-[#f7faff] min-h-screen" style="position: relative; z-index: 1;">
+            <!-- Back Button -->
+            <div class="mb-4">
+                <a href="{% url 'home' %}" class="inline-flex items-center text-[#0245a3] hover:text-[#8fbaf3] transition-colors font-semibold">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Dashboard
+                </a>
+            </div>
+
+            <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-[#0245a3] mb-2">Settings</h1>
+                <p class="text-[#0245a3]">Manage your account preferences and security settings</p>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="mb-8">
+                <div class="flex space-x-2 border-b border-[#8fbaf3]/30">
+                    <button onclick="switchTab('account')" id="tab-account" class="tab-button px-6 py-3 font-semibold text-[#0245a3] border-b-2 border-[#0245a3] transition-all">
+                        <i class="fas fa-user-circle mr-2"></i>Account
+                    </button>
+                    <button onclick="switchTab('profile')" id="tab-profile" class="tab-button px-6 py-3 font-semibold text-[#0245a3]/60 hover:text-[#0245a3] border-b-2 border-transparent transition-all">
+                        <i class="fas fa-id-card mr-2"></i>Profile
+                    </button>
+                    <button onclick="switchTab('notifications')" id="tab-notifications" class="tab-button px-6 py-3 font-semibold text-[#0245a3]/60 hover:text-[#0245a3] border-b-2 border-transparent transition-all">
+                        <i class="fas fa-bell mr-2"></i>Notifications
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content Container -->
+            <div id="tab-content">
+                
+                <!-- ACCOUNT TAB -->
+                <div id="content-account" class="tab-content">
+                    <form method="POST" action="{% url 'technician_settings' %}" class="space-y-8">
+                        {% csrf_token %}
+                        <input type="hidden" name="tab" value="account">
+
+                        <!-- Account Section -->
+                        <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                            <h2 class="text-2xl font-bold text-[#0245a3] mb-2">Account</h2>
+                            <p class="text-[#0245a3]/70 mb-6">Manage your account details and security settings.</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Username</label>
+                                    <input type="text" name="username" value="" placeholder="{{ user.username }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Email</label>
+                                    <input type="email" name="email" value="" placeholder="{{ user.email }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password & Security Section -->
+                        <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                            <h2 class="text-2xl font-bold text-[#0245a3] mb-2">Password & Security</h2>
+                            <p class="text-[#0245a3]/70 mb-6">Update your password</p>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Current Password</label>
+                                    <div class="relative">
+                                        <input type="password" id="current-password" name="current_password" placeholder="••••••••"
+                                               class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 pr-24 text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                        <button type="button" onclick="togglePassword('current-password')" 
+                                                class="absolute right-3 top-1/2 -translate-y-1/2 text-[#0245a3] hover:text-[#8fbaf3] font-medium text-sm">
+                                            Show
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">New Password</label>
+                                    <div class="relative">
+                                        <input type="password" id="new-password" name="new_password"
+                                               class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 pr-24 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                        <button type="button" onclick="togglePassword('new-password')" 
+                                                class="absolute right-3 top-1/2 -translate-y-1/2 text-[#0245a3] hover:text-[#8fbaf3] font-medium text-sm">
+                                            Show
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Confirm New Password</label>
+                                    <div class="relative">
+                                        <input type="password" id="confirm-password" name="confirm_password"
+                                               class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 pr-24 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                        <button type="button" onclick="togglePassword('confirm-password')" 
+                                                class="absolute right-3 top-1/2 -translate-y-1/2 text-[#0245a3] hover:text-[#8fbaf3] font-medium text-sm">
+                                            Show
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Recovery Section -->
+                        <div class="bg-gray-100/80 backdrop-blur-sm rounded-2xl p-6">
+                            <h2 class="text-xl font-bold text-[#0245a3] mb-2">Account Recovery</h2>
+                            <p class="text-[#0245a3]/70 mb-6">Set up recovery options to secure your account and regain access if needed.</p>
+                            
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-[#0245a3]">Two-factor Authentication</p>
+                                        <p class="text-sm text-[#0245a3]/70">Add an extra layer of security</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="two_factor" class="sr-only peer" {% if profile.two_factor_enabled %}checked{% endif %}>
+                                        <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#8fbaf3]/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#0245a3]"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-[#0245a3]">SMS Recovery</p>
+                                        <p class="text-sm text-[#0245a3]/70">Recover via text message</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="sms_recovery" class="sr-only peer" {% if profile.sms_recovery_enabled %}checked{% endif %}>
+                                        <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#8fbaf3]/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#0245a3]"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-[#0245a3]">Email Recovery</p>
+                                        <p class="text-sm text-[#0245a3]/70">Recover via email address</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="email_recovery" class="sr-only peer" {% if profile.email_recovery_enabled %}checked{% endif %}>
+                                        <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#8fbaf3]/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#0245a3]"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-[#0245a3] text-white font-semibold rounded-xl px-8 py-3 hover:bg-[#0245a3]/90 transition">
+                                <i class="fas fa-save mr-2"></i>Save Changes
+                            </button>
+                            <button type="button" onclick="openDeleteModal()" class="ml-3 bg-red-600 text-white font-semibold rounded-xl px-8 py-3 hover:bg-red-700 transition">
+                                <i class="fas fa-user-slash mr-2"></i>Delete Account
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- PROFILE TAB -->
+                <div id="content-profile" class="tab-content hidden">
+                    <form method="POST" enctype="multipart/form-data" action="{% url 'technician_settings' %}" class="space-y-8">
+                        {% csrf_token %}
+                        <input type="hidden" name="tab" value="profile">
+
+                        <!-- Personal Information Section -->
+                        <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                            <h2 class="text-2xl font-bold text-[#0245a3] mb-2">Personal Information</h2>
+                            <p class="text-[#0245a3]/70 mb-6">Update your personal details and contact information.</p>
+                            
+                            <!-- Profile Photo -->
+                            <div class="mb-6 flex items-center space-x-6">
+                                <div class="w-24 h-24 rounded-full bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] flex items-center justify-center overflow-hidden border-4 border-[#8fbaf3]">
+                                    {% if profile.profile_picture %}
+                                        <img src="{{ profile.profile_picture.url }}" alt="Profile" class="w-full h-full object-cover" id="profile-preview">
+                                    {% else %}
+                                        <i class="fas fa-user text-white text-3xl" id="profile-icon"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <input type="file" id="profile-photo-input" name="profile_picture" accept="image/*" class="hidden">
+                                    <button type="button" onclick="document.getElementById('profile-photo-input').click()" 
+                                            class="bg-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl px-6 py-2 hover:bg-[#8fbaf3]/80 transition">
+                                        <i class="fas fa-camera mr-2"></i>Change Photo
+                                    </button>
+                                    <p class="text-xs text-[#0245a3]/70 mt-2">Max 5MB. JPG, PNG, GIF</p>
+                                </div>
+                            </div>
+
+                            <!-- Form Fields -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">First Name</label>
+                                    <input type="text" name="first_name" value="{{ user.first_name|default:'' }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Last Name</label>
+                                    <input type="text" name="last_name" value="{{ user.last_name|default:'' }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Email Address</label>
+                                    <input type="email" name="email_address" value="{{ user.email }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Phone Number</label>
+                                    <input type="tel" name="phone_number" value="{{ profile.phone_number|default:'' }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Date of Birth</label>
+                                    <input type="date" name="date_of_birth" value="{{ profile.date_of_birth|date:'Y-m-d'|default:'' }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-[#0245a3] text-white font-semibold rounded-xl px-8 py-3 hover:bg-[#0245a3]/90 transition">
+                                <i class="fas fa-save mr-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+
+                <!-- NOTIFICATIONS TAB -->
+                <div id="content-notifications" class="tab-content hidden">
+                    <form method="POST" action="{% url 'technician_settings' %}" class="space-y-8">
+                        {% csrf_token %}
+                        <input type="hidden" name="tab" value="notifications">
+
+                        <!-- General Notifications -->
+                        <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                            <h2 class="text-2xl font-bold text-[#0245a3] mb-2">General Notifications</h2>
+                            <p class="text-[#0245a3]/70 mb-6">All notifications from your profile and your activities on the app.</p>
+                            
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-[#0245a3]">Ticket Updates</p>
+                                        <p class="text-sm text-[#0245a3]/70">Receive alerts when your ticket status changes.</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="email_notifications" class="sr-only peer" {% if settings.email_notifications %}checked{% endif %}>
+                                        <div class="w-14 h-7 bg-gray-300 rounded-full peer peer-checked:bg-[#0245a3] 
+                                                    peer-focus:ring-4 peer-focus:ring-[#8fbaf3]/50 
+                                                    peer-checked:after:translate-x-full after:absolute after:top-0.5 
+                                                    after:left-[4px] after:bg-white after:border-gray-300 after:border 
+                                                    after:rounded-full after:h-6 after:w-6 after:transition-all">
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-[#0245a3]">Message Alerts</p>
+                                        <p class="text-sm text-[#0245a3]/70">Get notified when technicians message you.</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="sms_notifications" class="sr-only peer" {% if settings.sms_notifications %}checked{% endif %}>
+                                        <div class="w-14 h-7 bg-gray-300 rounded-full peer peer-checked:bg-[#0245a3] 
+                                                    peer-focus:ring-4 peer-focus:ring-[#8fbaf3]/50 
+                                                    peer-checked:after:translate-x-full after:absolute after:top-0.5 
+                                                    after:left-[4px] after:bg-white after:border-gray-300 after:border 
+                                                    after:rounded-full after:h-6 after:w-6 after:transition-all">
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-medium text-[#0245a3]">Promotions & Updates</p>
+                                        <p class="text-sm text-[#0245a3]/70">Receive updates on new features and announcements.</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="notify_promotions" class="sr-only peer" {% if settings.promotions %}checked{% endif %}>
+                                        <div class="w-14 h-7 bg-gray-300 rounded-full peer peer-checked:bg-[#0245a3] 
+                                                    peer-focus:ring-4 peer-focus:ring-[#8fbaf3]/50 
+                                                    peer-checked:after:translate-x-full after:absolute after:top-0.5 
+                                                    after:left-[4px] after:bg-white after:border-gray-300 after:border 
+                                                    after:rounded-full after:h-6 after:w-6 after:transition-all">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-[#0245a3] text-white font-semibold rounded-xl px-8 py-3 hover:bg-[#0245a3]/90 transition">
+                                <i class="fas fa-save mr-2"></i>Save Changes
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div> <!-- END TAB CONTENT -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(tab) {
+    // hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+
+    // remove active state from all tabs
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('border-[#0245a3]');
+        btn.classList.remove('text-[#0245a3]');
+        btn.classList.add('text-[#0245a3]/60');
+    });
+
+    // show selected tab
+    document.getElementById(`content-${tab}`).classList.remove('hidden');
+
+    // mark selected tab as active
+    let tabBtn = document.getElementById(`tab-${tab}`);
+    tabBtn.classList.add('border-[#0245a3]');
+    tabBtn.classList.add('text-[#0245a3]');
+    tabBtn.classList.remove('text-[#0245a3]/60');
+}
+
+function togglePassword(id) {
+    const input = document.getElementById(id);
+    input.type = input.type === "password" ? "text" : "password";
+}
+
+// Profile image preview
+document.getElementById("profile-photo-input")?.addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Check file size (5MB = 5 * 1024 * 1024 bytes)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            this.value = '';
+            return;
+        }
+        
+        // Check file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Only JPG, PNG, and GIF files are allowed');
+            this.value = '';
+            return;
+        }
+        
+        // Preview the image
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const preview = document.getElementById("profile-preview");
+            const icon = document.getElementById("profile-icon");
+            
+            if (preview) {
+                preview.src = event.target.result;
+            } else if (icon) {
+                // If no image exists, create one and hide the icon
+                icon.style.display = 'none';
+                const img = document.createElement('img');
+                img.id = 'profile-preview';
+                img.className = 'w-full h-full object-cover';
+                img.src = event.target.result;
+                icon.parentElement.appendChild(img);
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Initialize tab from query param on load
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab') || 'account';
+    switchTab(tab);
+});
+
+function openDeleteModal(){
+    const m = document.getElementById('deleteModal');
+    if (m) m.classList.remove('hidden');
+}
+function closeDeleteModal(){
+    const m = document.getElementById('deleteModal');
+    if (m) m.classList.add('hidden');
+}
+</script>
+
+<!-- Delete Account Modal -->
+<div id="deleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white rounded-2xl shadow-xl w/full max-w-md p-6">
+    <h3 class="text-xl font-bold text-[#0245a3] mb-2">Delete Account</h3>
+    <p class="text-[#0245a3]/70 mb-4">This action is permanent. Enter your password to confirm.</p>
+    <form method="POST" action="{% url 'delete_account' %}">
+      {% csrf_token %}
+      <label class="block text-[#0245a3] font-medium mb-2">Password</label>
+      <input type="password" name="password" class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]" required>
+      <input type="hidden" name="next" value="technician_settings">
+      <div class="flex justify-end mt-6">
+        <button type="button" onclick="closeDeleteModal()" class="px-6 py-2 rounded-xl bg-gray-200 text-[#0245a3] font-semibold hover:bg-gray-300">Cancel</button>
+        <button type="submit" class="ml-3 px-6 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

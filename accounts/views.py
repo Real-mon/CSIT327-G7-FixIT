@@ -2,6 +2,8 @@ import os
 from django.contrib.auth.forms import PasswordChangeForm
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.urls import reverse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -21,6 +23,47 @@ import json
 from .models import Technician, TechnicianSpecialty, AssistanceRequest
 from .models import User, UserProfile, Message, Contact, BotChat, BotMessage, CreateTicket
 from django.utils import timezone
+
+
+@login_required
+def delete_account_view(request):
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        next_page = request.POST.get('next', '')
+        # Determine target settings page for redirects
+        if next_page == 'user_settings':
+            target_settings = f"{reverse('user_settings')}?tab=account"
+        elif next_page == 'technician_settings':
+            target_settings = f"{reverse('technician_settings')}?tab=account"
+        else:
+            # Fallback based on user role
+            try:
+                if request.user.profile.is_technician:
+                    target_settings = f"{reverse('technician_settings')}?tab=account"
+                else:
+                    target_settings = f"{reverse('user_settings')}?tab=account"
+            except Exception:
+                target_settings = f"{reverse('user_settings')}?tab=account"
+        if not request.user.check_password(password):
+            messages.error(request, 'Incorrect password. Account not deleted.')
+            return redirect(target_settings)
+        username = request.user.username
+        try:
+            request.user.delete()
+            logout(request)
+            messages.success(request, f'Account "{username}" has been deleted.')
+            return redirect('signup')
+        except Exception as e:
+            messages.error(request, 'Error deleting account. Please try again later.')
+            return redirect(target_settings)
+    # GET fallback
+    try:
+        if request.user.profile.is_technician:
+            return redirect(f"{reverse('technician_settings')}?tab=account")
+        else:
+            return redirect(f"{reverse('user_settings')}?tab=account")
+    except Exception:
+        return redirect(f"{reverse('user_settings')}?tab=account")
 
 
 def role_select_view(request):
@@ -1798,3 +1841,228 @@ def contact_technician(request, ticket_id, technician_id):
 
     messages.success(request, "Technician has been notified!")
     return redirect('messages_view')  # or wherever you want to redirect
+
+@login_required
+def technician_settings_view(request):
+    """
+    View for technician settings page - handles account, profile, and notification settings
+    """
+    user = request.user
+    
+    # Get or create user profile
+    profile, created = UserProfile.objects.get_or_create(user=user)
+    
+    # Use existing UserSettings model
+    user_settings, created = UserSettings.objects.get_or_create(user=user)
+    
+    if request.method == 'POST':
+        tab = request.POST.get('tab', 'account')
+        
+        if tab == 'account':
+            # Handle account settings
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            current_password = request.POST.get('current_password', '').strip()
+            new_password = request.POST.get('new_password', '').strip()
+            confirm_password = request.POST.get('confirm_password', '').strip()
+            
+            # Update username only if changed
+            if username and username != user.username:
+                if not User.objects.filter(username=username).exclude(id=user.id).exists():
+                    user.username = username
+                    user.save()
+                else:
+                    messages.error(request, 'Username already taken.')
+                    return redirect(f"{reverse('technician_settings')}?tab=account")
+            
+            # Update email only if changed
+            if email and email != user.email:
+                if not User.objects.filter(email=email).exclude(id=user.id).exists():
+                    user.email = email
+                    user.save()
+                else:
+                    messages.error(request, 'Email already in use.')
+                    return redirect(f"{reverse('technician_settings')}?tab=account")
+            
+            # Handle password change
+            if current_password and new_password and confirm_password:
+                if user.check_password(current_password):
+                    if new_password == confirm_password:
+                        if len(new_password) >= 8:
+                            user.set_password(new_password)
+                            user.save()
+                            update_session_auth_hash(request, user)
+                            messages.success(request, 'Password updated successfully!')
+                        else:
+                            messages.error(request, 'Password must be at least 8 characters long.')
+                            return redirect(f"{reverse('technician_settings')}?tab=account")
+                    else:
+                        messages.error(request, 'New passwords do not match.')
+                        return redirect(f"{reverse('technician_settings')}?tab=account")
+                else:
+                    messages.error(request, 'Current password is incorrect.')
+                    return redirect(f"{reverse('technician_settings')}?tab=account")
+            
+            # Handle account recovery options
+            profile.two_factor_enabled = 'two_factor' in request.POST
+            profile.sms_recovery_enabled = 'sms_recovery' in request.POST
+            profile.email_recovery_enabled = 'email_recovery' in request.POST
+            profile.save()
+            
+            messages.success(request, 'Account settings updated successfully!')
+            return redirect(f"{reverse('technician_settings')}?tab=account")
+        
+        elif tab == 'profile':
+            # Handle profile settings
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            email_address = request.POST.get('email_address', '').strip()
+            phone_number = request.POST.get('phone_number', '').strip()
+            date_of_birth = request.POST.get('date_of_birth', '').strip()
+            profile_picture = request.FILES.get('profile_picture')
+            
+            # Update user info
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+            if email_address and email_address != user.email:
+                if not User.objects.filter(email=email_address).exclude(id=user.id).exists():
+                    user.email = email_address
+                else:
+                    messages.error(request, 'Email already in use.')
+                    return redirect(f"{reverse('technician_settings')}?tab=profile")
+            
+            user.save()
+            
+            # Update profile info
+            if phone_number:
+                profile.phone_number = phone_number
+            if date_of_birth:
+                profile.date_of_birth = date_of_birth
+            
+            # Handle profile picture upload
+            if profile_picture:
+                if profile_picture.size > 5 * 1024 * 1024:
+                    messages.error(request, 'Profile picture must be less than 5MB.')
+                    return redirect(f"{reverse('technician_settings')}?tab=profile")
+                
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg']
+                if profile_picture.content_type not in allowed_types:
+                    messages.error(request, 'Only JPG, PNG, and GIF files are allowed.')
+                    return redirect(f"{reverse('technician_settings')}?tab=profile")
+                
+                try:
+                    if profile.profile_picture:
+                        try:
+                            profile.profile_picture.delete(save=False)
+                        except:
+                            pass
+                    profile.profile_picture = profile_picture
+                except Exception as e:
+                    messages.error(request, f'Error uploading profile picture: {str(e)}')
+                    return redirect(f"{reverse('technician_settings')}?tab=profile")
+            
+            profile.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect(f"{reverse('technician_settings')}?tab=profile")
+        
+        elif tab == 'notifications':
+            # Handle notification settings
+            user_settings.email_notifications = 'email_notifications' in request.POST
+            user_settings.sms_notifications = 'sms_notifications' in request.POST
+            if hasattr(user_settings, 'promotions'):
+                user_settings.promotions = 'notify_promotions' in request.POST
+            user_settings.save()
+            
+            messages.success(request, 'Notification settings updated successfully!')
+            return redirect(f"{reverse('technician_settings')}?tab=notifications")
+    
+    context = {
+        'user': user,
+        'profile': profile,
+        'settings': user_settings,
+    }
+    
+    return render(request, 'dashboard/technician_settings.html', context)
+
+@login_required
+def user_settings_view(request):
+    """
+    View for user settings: save Account, Profile, Notifications
+    """
+    user = request.user
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+
+    if request.method == 'POST':
+        tab = request.POST.get('tab', 'account')
+
+        if tab == 'account':
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+
+            changed = False
+            if username and username != user.username:
+                user.username = username
+                changed = True
+            if email and email != user.email:
+                user.email = email
+                changed = True
+
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+            current_password = request.POST.get('current_password', '')
+            if new_password or confirm_password:
+                if new_password != confirm_password:
+                    messages.error(request, 'Passwords do not match.')
+                elif not user.check_password(current_password):
+                    messages.error(request, 'Current password is incorrect.')
+                else:
+                    user.set_password(new_password)
+                    user.save()
+                    update_session_auth_hash(request, user)
+                    messages.success(request, 'Password updated successfully.')
+                    changed = False
+            if changed:
+                user.save()
+                messages.success(request, 'Account details saved.')
+            return redirect(f"{reverse('user_settings')}?tab=account")
+
+        elif tab == 'profile':
+            user.first_name = request.POST.get('first_name', user.first_name).strip()
+            user.last_name = request.POST.get('last_name', user.last_name).strip()
+            email_address = request.POST.get('email_address', '').strip()
+            if email_address:
+                user.email = email_address
+            profile.phone_number = request.POST.get('phone_number', profile.phone_number)
+            dob = request.POST.get('date_of_birth', '')
+            if dob:
+                try:
+                    profile.date_of_birth = dob
+                except Exception:
+                    pass
+            picture = request.FILES.get('profile_picture')
+            if picture:
+                profile.profile_picture = picture
+            user.save()
+            profile.save()
+            messages.success(request, 'Profile information saved.')
+            return redirect(f"{reverse('user_settings')}?tab=profile")
+
+        elif tab == 'notifications':
+            settings_obj.email_notifications = bool(request.POST.get('email_notifications'))
+            settings_obj.sms_notifications = bool(request.POST.get('sms_notifications'))
+            if hasattr(settings_obj, 'promotions'):
+                settings_obj.promotions = bool(request.POST.get('notify_promotions'))
+            settings_obj.save()
+            messages.success(request, 'Notification settings saved.')
+            return redirect(f"{reverse('user_settings')}?tab=notifications")
+
+    context = {
+        'title': 'User Settings - FixIT',
+        'profile': profile,
+        'user': user,
+        'settings': settings_obj,
+    }
+    return render(request, 'dashboard/user_settings.html', context)

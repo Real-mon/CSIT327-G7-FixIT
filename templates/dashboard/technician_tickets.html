@@ -3,13 +3,6 @@
 {% block title %}My Tickets - FixIT{% endblock %}
 
 {% block content %}
-<div class="absolute inset-0 overflow-hidden">
-    <div class="absolute -inset-10 opacity-20">
-        <div class="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-        <div class="absolute bottom-1/3 right-1/4 w-96 h-96 bg-gradient-to-r from-[#bdf1f6] to-[#8fbaf3] rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse animation-delay-2000"></div>
-    </div>
-</div>
-
 <div class="relative min-h-screen">
     <div class="flex">
         <!-- Sidebar -->
@@ -25,11 +18,11 @@
             </div>
 
             <nav class="space-y-2">
-                <a href="{% url 'technician_dashboard' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                <a href="{% url 'technician_dashboard' %}" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
                     <i class="fas fa-home w-5"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="{% url 'technician_tickets' %}" class="flex items-center space-x-3 bg-white/20 text-[#0245a3] font-semibold rounded-xl px-4 py-3">
+                <a href="{% url 'technician_tickets' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
                     <i class="fas fa-ticket-alt w-5"></i>
                     <span>My Tickets</span>
                 </a>
@@ -37,11 +30,7 @@
                     <i class="fas fa-comments w-5"></i>
                     <span>Messages</span>
                 </a>
-                <a href="{#}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
-                    <i class="fas fa-user w-5"></i>
-                    <span>My Profile</span>
-                </a>
-                <a href="{% url 'settings' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
+                <a href="{% url 'technician_settings' %}" class="flex items-center space-x-3 text-[#0245a3] hover:bg-white/20 rounded-xl px-4 py-3 transition">
                     <i class="fas fa-cog w-5"></i>
                     <span>Settings</span>
                 </a>

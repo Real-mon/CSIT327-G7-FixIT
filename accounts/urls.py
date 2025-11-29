@@ -1,21 +1,35 @@
 from django.urls import path
 from . import views
 
+
 urlpatterns = [
     path('signup/', views.signup_view, name='signup'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+
+
     path('dashboard/', views.dashboard_view, name='dashboard'),
-    path('profile/update/', views.profile_update_view, name='profile_update'),
-    path('role-select/', views.role_select_view, name='role_select'),
+
+    # Technician URLs
+    path('technician-dashboard/', views.technician_dashboard_view, name='technician_dashboard'),
+    path('technician-directory/', views.technician_directory_view, name='technician_directory'),
+    path('technician-messages/', views.technician_messages_view, name='technician_messages'),
+    path('technician-tickets/', views.technician_tickets_view, name='technician_tickets'),
+    path('technician-settings/', views.technician_settings_view, name='technician_settings'),
+    # User URLs
+    path('user-dashboard/', views.user_dashboard_view, name='user_dashboard'),
+    path('user-settings/', views.user_settings_view, name='user_settings'),
+    path('user-my-tickets/', views.my_tickets, name='my_tickets'),  #VIEW
+    path('user-message/', views.user_messages_view, name='user_message'),
+    # Profile URLs
     path('profile/user/', views.user_profile_view, name='user_profile'),
     path('profile/technician/', views.technician_profile_view, name='technician_profile'),
+    path('profile/update/', views.profile_update_view, name='profile_update'),
+    path('role-select/', views.role_select_view, name='role_select'),
+    
     path('password_reset/', views.password_reset_view, name='password_reset'),
     path('change-password/', views.change_password_view, name='change_password'),  # ADD THIS
-    path('technician-dashboard/', views.technician_dashboard_view, name='technician_dashboard'),
-    path('user-dashboard/', views.user_dashboard_view, name='user_dashboard'),
-    path('technician_directory/', views.technician_directory_view, name='technician_directory'),
-    path('user_message/', views.user_messages_view, name='user_message'),
+    
     path('debug/storage-detailed/', views.debug_storage_detailed, name='debug_storage_detailed'),
     path('debug/comprehensive-test/', views.comprehensive_storage_test, name='comprehensive_test'),
     path('debug/current-picture/', views.debug_current_profile_picture, name='debug_current_picture'),
@@ -27,8 +41,7 @@ urlpatterns = [
     path('technician/<int:technician_id>/', views.technician_detail_view, name='technician_detail'),
     path('request-assistance/', views.request_assistance_view, name='request_assistance'),
     path('technician/<int:technician_id>/availability/', views.get_technician_availability, name='technician_availability'),
-    path('technician-messages/', views.technician_messages_view, name='technician_messages'),
-    path('technician-tickets/', views.technician_tickets_view, name='technician_tickets'),
+    
     path('debug-request/', views.debug_request_assistance, name='debug_request'),
 
     #FAQ/Help Center
@@ -42,9 +55,10 @@ urlpatterns = [
     path('settings/', views.settings_view, name='settings'),
     path('settings/update/', views.update_notifications, name='update_notifications'),
     path('settings/change-password/', views.change_password_settings, name='change_password'),
+    path('account/delete/', views.delete_account_view, name='delete_account'),
 
     #CREATING TICKET
     path('create-ticket/', views.create_ticket, name='create_ticket'),
-    path('my-tickets/', views.my_tickets, name='my_tickets'),  #VIEW
+    
 path('available-technicians/', views.available_technicians, name='available-technicians'),
 ]

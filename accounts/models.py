@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+
 class UserProfile(models.Model):
     """
     Extended user profile to store additional information.
@@ -23,6 +24,9 @@ class UserProfile(models.Model):
     date_of_birth = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    two_factor_enabled = models.BooleanField(default=False)
+    sms_recovery_enabled = models.BooleanField(default=False)
+    email_recovery_enabled = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -36,6 +40,26 @@ class UserProfile(models.Model):
         if self.profile_picture and hasattr(self.profile_picture, 'url'):
             return self.profile_picture.url
         return None
+
+class NotificationSettings(models.Model):
+    """
+    Model for user notification preferences
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_settings')
+    email_notifications = models.BooleanField(default=True)
+    sms_notifications = models.BooleanField(default=True)
+    promotions = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.username}'s Notification Settings"
+    
+    class Meta:
+        db_table = 'notification_settings'
+        verbose_name = 'Notification Setting'
+        verbose_name_plural = 'Notification Settings'
 
 class TechnicianSpecialty(models.Model):
     """
@@ -278,6 +302,7 @@ class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
     email_notifications = models.BooleanField(default=True)
     sms_notifications = models.BooleanField(default=False)
+    promotions = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         db_table = 'user_settings'  # Use your existing Supabase table name
