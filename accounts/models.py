@@ -185,16 +185,7 @@ class AssistanceRequest(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assistance_requests')
-
-    #29/11/2025
-    technician = models.ForeignKey(
-        Technician,
-        on_delete=models.SET_NULL,  # keeps ticket if technician is deleted
-        null=True,  # allow NULL
-        blank=True,  # optional in forms/admin
-        related_name='assistance_requests'
-    )
-
+    technician = models.ForeignKey(Technician, on_delete=models.CASCADE, related_name='assistance_requests')
     ticket = models.ForeignKey(
         'CreateTicket', 
         on_delete=models.CASCADE, 
