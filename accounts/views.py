@@ -331,33 +331,23 @@ def request_assistance_view(request):
 
         # Create the ticket
         #TEST
-        print("🎫 Creating ticket...")
-        try:
-            # Get the most recent ticket for the current user
-            last_ticket = CreateTicket.objects.filter(user=request.user).order_by('-id').first()
+        # Use the latest existing ticket instead of creating a new one
+        print("📌 Fetching existing ticket...")
 
-            if not last_ticket:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'No ticket found. Please create a ticket first.'
-                }, status=400)
+        last_ticket = CreateTicket.objects.filter(user=request.user).order_by('-id').first()
 
-            ticket = CreateTicket.objects.create(
-                user=request.user,
-                title=title,
-                description=description,
-                priority=priority or 'medium',
-                #testing
-                category=last_ticket.category if last_ticket else 'Others',  # auto-set category
-                status='open'
-            )
-            print(f"✅ Ticket created: {ticket.id}")
-        except Exception as e:
-            print(f"❌ Error creating ticket: {e}")
+        if not last_ticket:
             return JsonResponse({
                 'success': False,
-                'error': f'Error creating ticket: {str(e)}'
+                'error': 'No ticket found. Please create a ticket first.'
             }, status=400)
+
+        ticket = last_ticket  # <--- Use the existing ticket
+
+        print(f"✅ Using existing ticket: {ticket.id}")
+
+
+
 
         # Create assistance request
         print("📋 Creating assistance request...")
@@ -374,8 +364,6 @@ def request_assistance_view(request):
             print(f"✅ Assistance request created: {assistance_request.id}")
         except Exception as e:
             print(f"❌ Error creating assistance request: {e}")
-            # Delete the ticket if assistance request fails
-            ticket.delete()
             return JsonResponse({
                 'success': False,
                 'error': f'Error creating assistance request: {str(e)}'
@@ -1537,16 +1525,55 @@ def get_unread_count(request):
 @login_required
 def technician_tickets_view(request):
     """
-    Display technician's assigned tickets
+    Display technician's assigned tickets with filters for category, status, and sorting.
     """
     user = request.user
 
-    # Get technician's assigned tickets
+    # Available filter options
+    categories = ['Hardware', 'Software', 'Network', 'Other']
+    status_choices = [
+        ('all', 'All Tickets'),
+        ('open', 'Open'),
+        ('in_progress', 'In Progress'),
+        ('pending', 'Pending'),
+        ('resolved', 'Resolved'),
+    ]
+    sort_choices = [
+        ('newest', 'Newest First'),
+        ('oldest', 'Oldest First'),
+        ('priority', 'Priority'),
+        ('category', 'Category'),
+    ]
+
+    # GET parameters
+    selected_category = request.GET.get('category')
+    selected_status = request.GET.get('status', 'all')
+    selected_sort = request.GET.get('sort', 'newest')
+
+    # Base tickets
     technician_tickets = CreateTicket.objects.filter(
         assistance_requests__technician__user_profile__user=user
     ).distinct()
 
-    # Prepare ticket data with customer info
+    # Category Filter
+    if selected_category in categories:
+        technician_tickets = technician_tickets.filter(category__iexact=selected_category)
+
+    # Status Filter
+    if selected_status != "all":
+        technician_tickets = technician_tickets.filter(status=selected_status)
+
+    # Sorting
+    if selected_sort == "newest":
+        technician_tickets = technician_tickets.order_by('-created_at')
+    elif selected_sort == "oldest":
+        technician_tickets = technician_tickets.order_by('created_at')
+    elif selected_sort == "priority":
+        technician_tickets = technician_tickets.order_by('-priority')
+    elif selected_sort == "category":
+        technician_tickets = technician_tickets.order_by('category')
+
+    # Build ticket data
     ticket_data = []
     for ticket in technician_tickets:
         customer = ticket.user
@@ -1554,9 +1581,11 @@ def technician_tickets_view(request):
             'full_name': customer.get_full_name() or customer.username,
             'email': customer.email,
             'profile_picture_url': getattr(customer.profile, 'profile_picture_url', ''),
-            'initials': (customer.first_name[0] + customer.last_name[0]).upper()
-                        if customer.first_name and customer.last_name
-                        else customer.username[:2].upper()
+            'initials': (
+                (customer.first_name[0] + customer.last_name[0]).upper()
+                if customer.first_name and customer.last_name
+                else customer.username[:2].upper()
+            )
         }
 
         ticket_data.append({
@@ -1564,7 +1593,7 @@ def technician_tickets_view(request):
             'customer': customer_info
         })
 
-    # Calculate stats
+    # Stats
     total_tickets = technician_tickets.count()
     open_tickets = technician_tickets.filter(status='open').count()
     in_progress_tickets = technician_tickets.filter(status='in_progress').count()
@@ -1576,10 +1605,18 @@ def technician_tickets_view(request):
         'open_tickets': open_tickets,
         'in_progress_tickets': in_progress_tickets,
         'resolved_tickets': resolved_tickets,
+        'categories': categories,
+        'status_choices': status_choices,
+        'sort_choices': sort_choices,
+        'selected_category': selected_category,
+        'selected_status': selected_status,
+        'selected_sort': selected_sort,
         'title': 'My Tickets - FixIT'
     }
 
     return render(request, 'dashboard/technician_tickets.html', context)
+
+
 
 
 @login_required
@@ -2689,3 +2726,71 @@ def technician_ticket_details_view(request, ticket_id):
         'is_technician': True
     }
     return render(request, 'dashboard/ticket_details.html', context)
+
+#ACCEPT TICKET FROM TECHNICIAN
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from .models import AssistanceRequest
+
+@csrf_exempt
+@login_required
+def accept_assistance_request(request, request_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST allowed'}, status=400)
+
+    try:
+        ar = AssistanceRequest.objects.get(id=request_id)
+
+        # Ensure logged-in user is the assigned technician
+        if ar.technician.user_profile.user != request.user:
+            return JsonResponse({'success': False, 'error': 'Not authorized'}, status=403)
+
+        if ar.status != 'pending':
+            return JsonResponse({'success': False, 'error': 'Request already handled'}, status=400)
+
+        # Mark as accepted
+        ar.status = 'accepted'
+        ar.save()
+
+        # Optionally mark ticket as assigned
+        ticket = ar.ticket
+        ticket.status = 'assigned'
+        ticket.save()
+
+        return JsonResponse({'success': True, 'message': 'Ticket accepted successfully'})
+
+    except AssistanceRequest.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Request not found'}, status=404)
+
+from django.shortcuts import render
+from .models import CreateTicket
+
+def ticket_list_view(request):
+    tickets = CreateTicket.objects.filter(user=request.user)
+
+    # Filter by category
+    category = request.GET.get('category')
+    if category and category != 'All':
+        tickets = tickets.filter(category__iexact=category)  # matches exactly Software, Hardware, etc.
+
+    # Filter by status
+    status = request.GET.get('status')
+    if status and status != 'all':
+        tickets = tickets.filter(status__iexact=status)
+
+    # Sort
+    sort = request.GET.get('sort')
+    if sort == 'newest':
+        tickets = tickets.order_by('-created_at')
+    elif sort == 'oldest':
+        tickets = tickets.order_by('created_at')
+    elif sort == 'priority':
+        tickets = tickets.order_by('-priority')
+    elif sort == 'category':
+        tickets = tickets.order_by('category')
+
+    return render(request, 'tickets/ticket_list.html', {'ticket_data': tickets})
+
+
+
