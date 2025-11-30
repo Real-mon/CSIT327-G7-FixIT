@@ -112,15 +112,26 @@
 
 
                         {% else %}
+                        <a href="{% url 'ticket_details' ticket.id %}"
+                           class="px-4 bg-white/30 border border-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl py-2 hover:bg-white/40 transition inline-flex items-center justify-center">
+                            <i class="fas fa-eye"></i>
+                        </a>
                         <a href="{% url 'user_message' %}?technician={{ assigned_technician.id }}&ticket={{ ticket.id }}"
                            class="flex-1 inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-[#1a5bb3] transition">
                             <i class="fas fa-comments mr-2"></i> Chat Technician
                         </a>
                         {% endif %}
-                         <a href="{% url 'delete_ticket' ticket.id %}"
-   class="flex-1 inline-flex justify-center items-center bg-red-600 text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-red-700 transition">
-    <i class="fas fa-times mr-2"></i> Cancel Ticket
-</a>
+                        {% if ticket.status == 'resolved' and assigned_technician %}
+                        <a href="{% url 'ticket_details' ticket.id %}#rating"
+                           class="flex-1 inline-flex justify-center items-center bg-yellow-500 text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-yellow-600 transition">
+                            <i class="fas fa-star mr-2"></i> Review
+                        </a>
+                        {% else %}
+                        <a href="{% url 'delete_ticket' ticket.id %}"
+                           class="flex-1 inline-flex justify-center items-center bg-red-600 text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-red-700 transition">
+                            <i class="fas fa-times mr-2"></i> Cancel Ticket
+                        </a>
+                        {% endif %}
 
 
                     </div>

@@ -24,7 +24,7 @@ from django.dispatch import receiver
 from django.shortcuts import get_object_or_404
 import json
 from .models import Technician, TechnicianSpecialty, AssistanceRequest
-from .models import User, UserProfile, Message, Contact, CreateTicket, ChatSession, Notification, Notifications_Technician, MessageEditHistory
+from .models import User, UserProfile, Message, Contact, CreateTicket, ChatSession, Notification, Notifications_Technician, MessageEditHistory, TechnicianReview
 from django.db.models.signals import post_save
 from django.utils import timezone
 
@@ -2723,10 +2723,15 @@ def delete_ticket(request, ticket_id):
 def ticket_details_view(request, ticket_id):
     """View ticket details for regular users"""
     ticket = get_object_or_404(CreateTicket, id=ticket_id, user=request.user)
+    assigned_technician = None
+    ar = ticket.assistance_requests.first()
+    if ar and ar.technician:
+        assigned_technician = ar.technician
     
     context = {
         'ticket': ticket,
-        'title': f'Ticket #{ticket.id} - {ticket.title}'
+        'title': f'Ticket #{ticket.id} - {ticket.title}',
+        'assigned_technician': assigned_technician
     }
     return render(request, 'dashboard/ticket_details.html', context)
 
@@ -2738,10 +2743,129 @@ def technician_ticket_details_view(request, ticket_id):
         id=ticket_id,
         assistance_requests__technician__user_profile__user=request.user
     )
-    
+    ar = ticket.assistance_requests.first()
+    assigned_technician = ar.technician if ar and ar.technician else None
+    review = None
+    if assigned_technician:
+        review = TechnicianReview.objects.filter(
+            technician=assigned_technician,
+            user=ticket.user
+        ).order_by('-created_at').first()
+
     context = {
         'ticket': ticket,
         'title': f'Ticket #{ticket.id} - {ticket.title}',
-        'is_technician': True
+        'is_technician': True,
+        'assigned_technician': assigned_technician,
+        'review': review
     }
     return render(request, 'dashboard/ticket_details.html', context)
+@login_required
+def resolve_ticket(request, ticket_id):
+    """Technician toggles ticket resolved status and notifies parties"""
+    user = request.user
+    ticket = get_object_or_404(
+        CreateTicket,
+        id=ticket_id,
+        assistance_requests__technician__user_profile__user=user
+    )
+    if request.method == 'POST':
+        if ticket.status == 'resolved':
+            ar = ticket.assistance_requests.first()
+            assigned_technician = ar.technician if ar and ar.technician else None
+            if assigned_technician and TechnicianReview.objects.filter(
+                technician=assigned_technician,
+                user=ticket.user
+            ).exists():
+                messages.error(request, "Cannot unresolve this ticket because a review has already been submitted.")
+                return redirect('technician_tickets')
+            ticket.status = 'open'
+            ticket.save()
+            Notifications_Technician.objects.create(
+                technician=user,
+                message=f"Ticket #{ticket.id} reopened",
+                ticket=None
+            )
+            Notification.objects.create(
+                recipient=ticket.user,
+                sender=user,
+                ticket=ticket,
+                message=f"Your ticket #{ticket.id} '{ticket.title}' was reopened."
+            )
+            messages.success(request, f"Ticket #{ticket.id} set to Open.")
+        else:
+            ticket.status = 'resolved'
+            ticket.save()
+            Notifications_Technician.objects.create(
+                technician=user,
+                message=f"Ticket #{ticket.id} marked as resolved",
+                ticket=None
+            )
+            Notification.objects.create(
+                recipient=ticket.user,
+                sender=user,
+                ticket=ticket,
+                message=f"Your ticket #{ticket.id} '{ticket.title}' has been resolved. Please provide feedback and a rating."
+            )
+            messages.success(request, f"Ticket #{ticket.id} set to Resolved and notifications sent.")
+        return redirect('technician_tickets')
+    return redirect('technician_tickets')
+
+@login_required
+def submit_ticket_review(request, ticket_id):
+    """User submits rating/comment for the technician on a resolved ticket"""
+    if request.method != 'POST':
+        return redirect('ticket_details', ticket_id=ticket_id)
+
+    ticket = get_object_or_404(CreateTicket, id=ticket_id, user=request.user)
+    if ticket.status != 'resolved':
+        messages.error(request, 'You can only rate after the ticket is resolved.')
+        return redirect('ticket_details', ticket_id=ticket_id)
+
+    ar = ticket.assistance_requests.first()
+    if not ar or not ar.technician:
+        messages.error(request, 'No technician assigned to this ticket.')
+        return redirect('ticket_details', ticket_id=ticket_id)
+
+    technician = ar.technician
+    try:
+        rating = int(request.POST.get('rating', ''))
+    except ValueError:
+        messages.error(request, 'Invalid rating value.')
+        return redirect('ticket_details', ticket_id=ticket_id)
+    comment = request.POST.get('comment', '')
+
+    if rating < 1 or rating > 5:
+        messages.error(request, 'Rating must be between 1 and 5.')
+        return redirect('ticket_details', ticket_id=ticket_id)
+
+    # Create or update review
+    review, created = TechnicianReview.objects.get_or_create(
+        technician=technician,
+        user=request.user,
+        defaults={
+            'rating': rating,
+            'comment': comment
+        }
+    )
+    if not created:
+        # adjust average rating without changing review_count
+        old_rating = review.rating
+        review.rating = rating
+        review.comment = comment
+        review.save()
+        if technician.review_count > 0:
+            technician.average_rating = ((technician.average_rating * technician.review_count) - old_rating + rating) / technician.review_count
+            technician.save()
+    else:
+        technician.update_rating(rating)
+
+    # Notify technician
+    Notifications_Technician.objects.create(
+        technician=technician.user_profile.user,
+        message=f"New review received: {rating} stars",
+        ticket=None
+    )
+
+    messages.success(request, 'Thank you for your feedback!')
+    return redirect('my_tickets')

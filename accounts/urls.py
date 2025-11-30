@@ -30,6 +30,7 @@ urlpatterns = [
     path('technician/<int:technician_id>/availability/', views.get_technician_availability, name='technician_availability'),
     path('technician-messages/', views.technician_messages_view, name='technician_messages'),
     path('technician-tickets/', views.technician_tickets_view, name='technician_tickets'),
+    path('technician/ticket/<int:ticket_id>/resolve/', views.resolve_ticket, name='resolve_ticket'),
     path('debug-request/', views.debug_request_assistance, name='debug_request'),
     path('api/delete-message/', views.handle_delete_message, name='delete_message'),
     path('user/chat/delete/', views.handle_delete_chat, name='user_delete_chat'),
@@ -60,6 +61,7 @@ urlpatterns = [
 path('available-technicians/', views.available_technicians, name='available-technicians'),
     
     path('ticket/<int:ticket_id>/', views.ticket_details_view, name='ticket_details'),
+    path('ticket/<int:ticket_id>/review/', views.submit_ticket_review, name='submit_ticket_review'),
     path('technician/ticket/<int:ticket_id>/', views.technician_ticket_details_view, name='technician_ticket_details'),
 
     #DELETE TICKET

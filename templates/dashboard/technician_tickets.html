@@ -145,14 +145,25 @@
                                     <i class="fas fa-envelope mr-2"></i> Message Customer
                                 </a>
                                 
-                                <a href="{#}"
+                                {% if ticket.status == 'resolved' %}
+                                <a href="{% url 'technician_ticket_details' ticket.id %}#reviews"
+                                   class="w-full inline-flex justify-center items-center bg-yellow-500 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-yellow-600 transition">
+                                    <i class="fas fa-star mr-2"></i> View Rating & Feedback
+                                </a>
+                                {% else %}
+                                <a href="{% url 'technician_ticket_details' ticket.id %}"
                                    class="w-full inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-[#1a5bb3] transition">
                                     <i class="fas fa-eye mr-2"></i> View Details
                                 </a>
+                                {% endif %}
                                 
-                                <button class="w-full inline-flex justify-center items-center bg-green-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-green-700 transition">
-                                    <i class="fas fa-check-circle mr-2"></i> Mark Resolved
-                                </button>
+                                <form method="post" action="{% url 'resolve_ticket' ticket.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full inline-flex justify-center items-center bg-green-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-green-700 transition">
+                                        <i class="fas fa-check-circle mr-2"></i> Mark Resolved
+                                    </button>
+                                </form>
+                                
                             </div>
                         </div>
                     </div>
