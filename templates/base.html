@@ -35,11 +35,8 @@
                 
                 <div class="hidden md:ml-6 md:flex md:items-center md:space-x-4">
                     {% if user.is_authenticated %}
-                        <a href="{% url 'dashboard' %}" class="text-white hover:bg-white/20 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
-                        </a>
                         <a href="{% url 'profile_update' %}" class="text-white hover:bg-white/20 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            <i class="fas fa-user-edit mr-1"></i> Update Profile
+                            <i class="fas fa-user-edit mr-1"></i> Profile
                         </a>
                         <a href="{% url 'logout' %}" class="text-white hover:bg-white/20 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
                             <i class="fas fa-sign-out-alt mr-1"></i> Logout
@@ -61,11 +58,8 @@
         <div class="md:hidden hidden" id="mobile-menu" style="position: relative; z-index: 101;">
             <div class="px-2 pt-2 pb-3 space-y-1 bg-[#0245a3]">
                 {% if user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="text-white hover:bg-white/20 block px-3 py-2 rounded-md text-base font-medium">
-                        <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
-                    </a>
                     <a href="{% url 'profile_update' %}" class="text-white hover:bg-white/20 block px-3 py-2 rounded-md text-base font-medium">
-                        <i class="fas fa-user-edit mr-2"></i> Update Profile
+                        <i class="fas fa-user-edit mr-2"></i> Profile
                     </a>
                     <a href="{% url 'logout' %}" class="text-white hover:bg-white/20 block px-3 py-2 rounded-md text-base font-medium">
                         <i class="fas fa-sign-out-alt mr-2"></i> Logout

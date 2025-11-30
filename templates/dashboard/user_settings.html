@@ -69,6 +69,13 @@
                                            class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
                                 </div>
                             </div>
+
+                            <div class="mt-6">
+                                <label class="block text-[#0245a3] font-medium mb-2">Bio</label>
+                                <textarea name="bio" rows="4" placeholder="Tell us about yourself"
+                                    class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">{% if user.profile.is_technician and user.profile.technician_profile %}{{ user.profile.technician_profile.bio|default:'' }}{% endif %}</textarea>
+                                <p class="text-xs text-[#0245a3]/70 mt-2">A short description shown on your profile.</p>
+                            </div>
                         </div>
 
                         <!-- Password & Security Section -->
@@ -219,6 +226,21 @@
                                 <div>
                                     <label class="block text-[#0245a3] font-medium mb-2">Date of Birth</label>
                                     <input type="date" name="date_of_birth" value="" placeholder="{{ profile.date_of_birth|date:'Y-m-d'|default:'' }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[#0245a3] font-medium mb-2">Address</label>
+                                    <input type="text" name="address" value="" placeholder="{{ profile.address|default:'' }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">City</label>
+                                    <input type="text" name="city" value="" placeholder="{{ profile.city|default:'' }}"
+                                           class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                </div>
+                                <div>
+                                    <label class="block text-[#0245a3] font-medium mb-2">Country</label>
+                                    <input type="text" name="country" value="" placeholder="{{ profile.country|default:'' }}"
                                            class="w-full bg-white/40 border border-[#8fbaf3]/30 rounded-xl px-4 py-3 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
                                 </div>
                             </div>

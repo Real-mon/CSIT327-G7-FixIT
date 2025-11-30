@@ -465,13 +465,22 @@ def technician_detail_view(request, technician_id):
     # Get recent reviews
     recent_reviews = technician.reviews.select_related('user').order_by('-created_at')[:5]
 
+    avg_rating = float(technician.average_rating or 0)
+    full_stars = int(avg_rating)
+    has_half_star = (avg_rating - full_stars) >= 0.5 and full_stars < 5
+    empty_stars = 5 - full_stars - (1 if has_half_star else 0)
+
     context = {
         'technician': technician,
         'recent_reviews': recent_reviews,
+        'avg_rating': avg_rating,
+        'full_stars': full_stars,
+        'has_half_star': has_half_star,
+        'empty_stars': empty_stars,
         'title': f'{technician.full_name} - Technician Profile - FixIT'
     }
 
-    return render(request, 'dashboard/technician_detail.html', context)
+    return render(request, 'dashboard/technician_profile', context)
 
 @receiver(post_save, sender=AssistanceRequest)
 def create_chat_session_on_assistance_request(sender, instance, created, **kwargs):
@@ -1679,11 +1688,50 @@ def profile_update_view(request):
     profile_form = ProfileUpdateForm(instance=request.user.profile)
     picture_form = ProfilePictureForm(instance=request.user.profile)
 
+    avg_rating = None
+    full_stars = 0
+    has_half_star = False
+    empty_stars = 5
+    badge_states = None
+    if getattr(request.user.profile, 'is_technician', False):
+        technician = Technician.objects.filter(user_profile__user=request.user).first()
+        if technician and technician.average_rating is not None:
+            avg_rating = float(technician.average_rating)
+            full_stars = int(avg_rating)
+            has_half_star = (avg_rating - full_stars) >= 0.5 and full_stars < 5
+            empty_stars = 5 - full_stars - (1 if has_half_star else 0)
+
+        resolved_count = CreateTicket.objects.filter(
+            assistance_requests__technician__user_profile__user=request.user,
+            status='resolved'
+        ).distinct().count()
+
+        levels = [
+            ('Novice', 'badge-novice', 0),
+            ('Advanced Beginner', 'badge-advanced', 1),
+            ('Competent', 'badge-competent', 2),
+            ('Proficient', 'badge-proficient', 3),
+            ('Expert', 'badge-expert', 4),
+        ]
+        badge_states = [
+            {
+                'name': name,
+                'css': css,
+                'unlocked': resolved_count >= threshold
+            }
+            for (name, css, threshold) in levels
+        ]
+
     context = {
         'user_form': user_form,
         'profile_form': profile_form,
         'picture_form': picture_form,
-        'title': 'Update Profile - FixIT'
+        'title': 'Update Profile - FixIT',
+        'avg_rating': avg_rating,
+        'full_stars': full_stars,
+        'has_half_star': has_half_star,
+        'empty_stars': empty_stars,
+        'badge_states': badge_states,
     }
 
     return render(request, 'accounts/profile_update.html', context)
@@ -2410,6 +2458,67 @@ def change_password_settings(request):
 @login_required
 def user_settings_view(request):
     settings_obj, _ = UserSettings.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        tab = request.POST.get('tab', 'account')
+        user = request.user
+        profile = user.profile
+        if tab == 'account':
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            bio = request.POST.get('bio', '').strip()
+            if username:
+                user.username = username
+            if email:
+                user.email = email
+            if bio and getattr(user.profile, 'is_technician', False):
+                try:
+                    tech = Technician.objects.filter(user_profile=user.profile).first()
+                    if tech:
+                        tech.bio = bio
+                        tech.save()
+                except Exception:
+                    pass
+            user.save()
+            messages.success(request, 'Account details updated.')
+            return redirect(f"{reverse('user_settings')}?tab=account")
+        elif tab == 'profile':
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            email_address = request.POST.get('email_address', '').strip()
+            phone_number = request.POST.get('phone_number', '').strip()
+            date_of_birth = request.POST.get('date_of_birth', '').strip()
+            address = request.POST.get('address', '').strip()
+            city = request.POST.get('city', '').strip()
+            country = request.POST.get('country', '').strip()
+
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+            if email_address:
+                user.email = email_address
+            if phone_number:
+                profile.phone_number = phone_number
+            if date_of_birth:
+                try:
+                    from datetime import datetime
+                    profile.date_of_birth = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+                except Exception:
+                    pass
+            if address:
+                profile.address = address
+            if city:
+                profile.city = city
+            if country:
+                profile.country = country
+            if 'profile_picture' in request.FILES:
+                profile.profile_picture = request.FILES['profile_picture']
+
+            user.save()
+            profile.save()
+            messages.success(request, 'Profile details updated.')
+            return redirect(f"{reverse('user_settings')}?tab=profile")
+
     context = {
         'settings': settings_obj,
         'profile': request.user.profile,
@@ -2420,6 +2529,67 @@ def user_settings_view(request):
 @login_required
 def technician_settings_view(request):
     settings_obj, _ = UserSettings.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        tab = request.POST.get('tab', 'account')
+        user = request.user
+        profile = user.profile
+        if tab == 'account':
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            bio = request.POST.get('bio', '').strip()
+            if username:
+                user.username = username
+            if email:
+                user.email = email
+            if bio:
+                try:
+                    tech = Technician.objects.filter(user_profile=user.profile).first()
+                    if tech:
+                        tech.bio = bio
+                        tech.save()
+                except Exception:
+                    pass
+            user.save()
+            messages.success(request, 'Account details updated.')
+            return redirect(f"{reverse('technician_settings')}?tab=account")
+        elif tab == 'profile':
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            email_address = request.POST.get('email_address', '').strip()
+            phone_number = request.POST.get('phone_number', '').strip()
+            date_of_birth = request.POST.get('date_of_birth', '').strip()
+            address = request.POST.get('address', '').strip()
+            city = request.POST.get('city', '').strip()
+            country = request.POST.get('country', '').strip()
+
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+            if email_address:
+                user.email = email_address
+            if phone_number:
+                profile.phone_number = phone_number
+            if date_of_birth:
+                try:
+                    from datetime import datetime
+                    profile.date_of_birth = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+                except Exception:
+                    pass
+            if address:
+                profile.address = address
+            if city:
+                profile.city = city
+            if country:
+                profile.country = country
+            if 'profile_picture' in request.FILES:
+                profile.profile_picture = request.FILES['profile_picture']
+
+            user.save()
+            profile.save()
+            messages.success(request, 'Profile details updated.')
+            return redirect(f"{reverse('technician_settings')}?tab=profile")
+
     context = {
         'settings': settings_obj,
         'profile': request.user.profile,

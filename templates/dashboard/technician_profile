@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Technician Profile - FixIT{% endblock %}
+
+{% block sidebar %}{% include 'sidebars/sidebar_user.html' %}{% endblock %}
+
+{% block content %}
+<div class="relative min-h-screen">
+    <div class="p-8">
+        <div class="mb-8 flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-[#0245a3]">{{ technician.full_name|default:technician.user_profile.user.username }}</h1>
+                <div class="mt-2 flex items-center space-x-4 text-[#0245a3]">
+                    <span class="px-3 py-1 rounded-full border {{ technician.availability_class }}">{{ technician.availability_status }}</span>
+                    <div class="flex items-center space-x-2">
+                        <div class="flex items-center" title="{{ avg_rating|floatformat:1 }} / 5">
+                            {% for _ in '12345' %}
+                                {% if forloop.counter <= full_stars %}
+                                    <i class="fas fa-star text-yellow-500"></i>
+                                {% elif has_half_star and forloop.counter == full_stars|add:1 %}
+                                    <i class="fas fa-star-half-alt text-yellow-500"></i>
+                                {% else %}
+                                    <i class="fas fa-star text-gray-300"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="text-sm">{{ avg_rating|floatformat:1 }} / 5 ({{ technician.review_count }} reviews)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-20 h-20 rounded-full overflow-hidden border-4 border-[#8fbaf3] bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] flex items-center justify-center text-white text-2xl">
+                {% if technician.profile_picture_url %}
+                    <img src="{{ technician.profile_picture_url }}" alt="Profile" class="w-full h-full object-cover">
+                {% else %}
+                    {{ technician.initials }}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-8">
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-xl font-bold text-[#0245a3] mb-4">Bio</h2>
+                    <p class="text-[#0245a3]/80">{{ technician.bio|default:"No bio provided." }}</p>
+                </div>
+
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-xl font-bold text-[#0245a3] mb-4">Recent Reviews</h2>
+                    {% if recent_reviews %}
+                    <div class="space-y-4">
+                        {% for review in recent_reviews %}
+                        <div class="p-4 rounded-xl bg-white/20 border border-[#8fbaf3]/30">
+                            <div class="flex items-center justify-between">
+                                <div class="text-[#0245a3] font-semibold">{{ review.user.get_full_name|default:review.user.username }}</div>
+                                <div class="text-[#0245a3]">{{ review.rating }}/5</div>
+                            </div>
+                            {% if review.comment %}
+                            <div class="mt-2 text-[#0245a3]/80">{{ review.comment }}</div>
+                            {% endif %}
+                            <div class="mt-2 text-xs text-[#0245a3]/60">{{ review.created_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-[#0245a3]/70">No reviews yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="space-y-8">
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-xl font-bold text-[#0245a3] mb-4">Specialties</h2>
+                    <div class="flex flex-wrap gap-2">
+                        {% for s in technician.get_specialties_list %}
+                        <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">{{ s }}</span>
+                        {% empty %}
+                        <span class="bg-[#8fbaf3]/30 text-[#0245a3] text-xs px-3 py-1 rounded-full">General IT Support</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-xl font-bold text-[#0245a3] mb-4">Stats</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 rounded-xl bg-white/20 border border-[#8fbaf3]/30">
+                            <div class="text-sm text-[#0245a3]/70">Completed</div>
+                            <div class="text-2xl font-bold text-[#0245a3]">{{ technician.completed_tickets }}</div>
+                        </div>
+                        <div class="p-4 rounded-xl bg-white/20 border border-[#8fbaf3]/30">
+                            <div class="text-sm text-[#0245a3]/70">Experience</div>
+                            <div class="text-2xl font-bold text-[#0245a3]">{{ technician.experience_years }}y</div>
+                        </div>
+                        <div class="p-4 rounded-xl bg-white/20 border border-[#8fbaf3]/30">
+                            <div class="text-sm text-[#0245a3]/70">Avg Response</div>
+                            <div class="text-2xl font-bold text-[#0245a3]">{{ technician.average_response_time }}h</div>
+                        </div>
+                        <div class="p-4 rounded-xl bg-white/20 border border-[#8fbaf3]/30">
+                            <div class="text-sm text-[#0245a3]/70">Rate</div>
+                            <div class="text-2xl font-bold text-[#0245a3]">{% if technician.hourly_rate %}₱{{ technician.hourly_rate }}{% else %}—{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6">
+                    <h2 class="text-xl font-bold text-[#0245a3] mb-2">Certification</h2>
+                    <div class="text-[#0245a3]/80">{{ technician.certification|default:"None listed" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
