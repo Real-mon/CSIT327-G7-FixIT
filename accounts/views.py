@@ -2,6 +2,7 @@ import os
 from django.contrib.auth.forms import PasswordChangeForm
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -2361,12 +2362,10 @@ def ticket_history(request):
 #SETTINGS PAGE
 @login_required
 def settings_view(request):
-    """Display settings page."""
-    settings, created = UserSettings.objects.get_or_create(user=request.user)
-    context = {
-        'settings': settings
-    }
-    return render(request, 'dashboard/settings.html', context)
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.is_technician:
+        return redirect('technician_settings')
+    return redirect('user_settings')
 
 
 @login_required
@@ -2407,6 +2406,63 @@ def change_password_settings(request):
 
     # GET request - show the form
     return render(request, 'accounts/change_password.html')
+
+@login_required
+def user_settings_view(request):
+    settings_obj, _ = UserSettings.objects.get_or_create(user=request.user)
+    context = {
+        'settings': settings_obj,
+        'profile': request.user.profile,
+        'title': 'Settings'
+    }
+    return render(request, 'dashboard/user_settings.html', context)
+
+@login_required
+def technician_settings_view(request):
+    settings_obj, _ = UserSettings.objects.get_or_create(user=request.user)
+    context = {
+        'settings': settings_obj,
+        'profile': request.user.profile,
+        'title': 'Settings'
+    }
+    return render(request, 'dashboard/technician_settings.html', context)
+
+@login_required
+def delete_account_view(request):
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        next_page = request.POST.get('next', '')
+        if next_page == 'user_settings':
+            target_settings = f"{reverse('user_settings')}?tab=account"
+        elif next_page == 'technician_settings':
+            target_settings = f"{reverse('technician_settings')}?tab=account"
+        else:
+            try:
+                if request.user.profile.is_technician:
+                    target_settings = f"{reverse('technician_settings')}?tab=account"
+                else:
+                    target_settings = f"{reverse('user_settings')}?tab=account"
+            except Exception:
+                target_settings = f"{reverse('user_settings')}?tab=account"
+        if not request.user.check_password(password):
+            messages.error(request, 'Incorrect password. Account not deleted.')
+            return redirect(target_settings)
+        username = request.user.username
+        try:
+            request.user.delete()
+            logout(request)
+            messages.success(request, f'Account "{username}" has been deleted.')
+            return redirect('signup')
+        except Exception:
+            messages.error(request, 'Error deleting account. Please try again later.')
+            return redirect(target_settings)
+    try:
+        if request.user.profile.is_technician:
+            return redirect(f"{reverse('technician_settings')}?tab=account")
+        else:
+            return redirect(f"{reverse('user_settings')}?tab=account")
+    except Exception:
+        return redirect(f"{reverse('user_settings')}?tab=account")
 
 
 

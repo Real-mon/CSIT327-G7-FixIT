@@ -48,8 +48,11 @@ urlpatterns = [
 
     #Settings
     path('settings/', views.settings_view, name='settings'),
+    path('technician-settings/', views.technician_settings_view, name='technician_settings'),
+    path('user-settings/', views.user_settings_view, name='user_settings'),
     path('settings/update/', views.update_notifications, name='update_notifications'),
     path('settings/change-password/', views.change_password_settings, name='change_password'),
+    path('account/delete/', views.delete_account_view, name='delete_account'),
 
     #CREATING TICKET
     path('create-ticket/', views.create_ticket, name='create_ticket'),

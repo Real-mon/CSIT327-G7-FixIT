@@ -23,7 +23,7 @@
     <!-- Navigation Bar Block -->
     {% block navigation %}
     {% if not hide_navigation %}
-    <nav class="bg-white shadow-lg">
+    <nav class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] shadow-lg" style="position: relative; z-index: 100;">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
@@ -33,23 +33,10 @@
                     </a>
                 </div>
                 
-                <div class="hidden md:ml-6 md:flex md:items-center md:space-x-4">
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'dashboard' %}" class="text-white hover:bg-blue-500 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
-                        </a>
-                        <a href="{% url 'profile_update' %}" class="text-white hover:bg-blue-500 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            <i class="fas fa-user-edit mr-1"></i> Update Profile
-                        </a>
-                        <a href="{% url 'logout' %}" class="text-white hover:bg-blue-500 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
-                        </a>
-                    {% endif %}
-                </div>
                 
                 <!-- Mobile menu button -->
                 <div class="md:hidden flex items-center">
-                    <button type="button" class="text-white hover:bg-blue-500 inline-flex items-center justify-center p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white" 
+                    <button type="button" class="text-white hover:bg-white/20 inline-flex items-center justify-center p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white" 
                             id="mobile-menu-button">
                         <i class="fas fa-bars"></i>
                     </button>
@@ -58,16 +45,16 @@
         </div>
         
         <!-- Mobile menu -->
-        <div class="md:hidden hidden" id="mobile-menu">
-            <div class="px-2 pt-2 pb-3 space-y-1 bg-blue-700">
+        <div class="md:hidden hidden" id="mobile-menu" style="position: relative; z-index: 101;">
+            <div class="px-2 pt-2 pb-3 space-y-1 bg-[#0245a3]">
                 {% if user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="text-white hover:bg-blue-600 block px-3 py-2 rounded-md text-base font-medium">
+                    <a href="{% url 'dashboard' %}" class="text-white hover:bg-white/20 block px-3 py-2 rounded-md text-base font-medium">
                         <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
                     </a>
-                    <a href="{% url 'profile_update' %}" class="text-white hover:bg-blue-600 block px-3 py-2 rounded-md text-base font-medium">
+                    <a href="{% url 'profile_update' %}" class="text-white hover:bg-white/20 block px-3 py-2 rounded-md text-base font-medium">
                         <i class="fas fa-user-edit mr-2"></i> Update Profile
                     </a>
-                    <a href="{% url 'logout' %}" class="text-white hover:bg-blue-600 block px-3 py-2 rounded-md text-base font-medium">
+                    <a href="{% url 'logout' %}" class="text-white hover:bg-white/20 block px-3 py-2 rounded-md text-base font-medium">
                         <i class="fas fa-sign-out-alt mr-2"></i> Logout
                     </a>
                 {% endif %}
@@ -79,9 +66,9 @@
 
     <!-- Messages -->
     {% if messages %}
-    <div class="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+    <div id="toast-messages" class="fixed top-4 right-4 z-50 space-y-2 max-w-md" style="z-index: 9999;">
         {% for message in messages %}
-        <div class="{% if message.tags == 'success' %}bg-green-100 border-green-400 text-green-700
+        <div class="toast-message {% if message.tags == 'success' %}bg-green-100 border-green-400 text-green-700
                    {% elif message.tags == 'error' %}bg-red-100 border-red-400 text-red-700
                    {% elif message.tags == 'warning' %}bg-yellow-100 border-yellow-400 text-yellow-700
                    {% else %}bg-blue-100 border-blue-400 text-blue-700{% endif %} 
@@ -110,7 +97,7 @@
 <!-- Footer Block -->
     {% block footer %}
     {% if not hide_navigation %}
-    <footer class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white mt-12">
+    <footer class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white mt-12" style="position: relative; z-index: 10;">
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <p class="text-sm">&copy; 2025 FixIT - Computer Repair Service. All rights reserved.</p>
@@ -127,30 +114,27 @@
     <!-- Custom JS -->
     <script src="{% static 'js/script.js' %}"></script>
     
-    <!-- Mobile Menu Script (only load if navigation exists) -->
-    {% if request.resolver_match.url_name == 'dashboard' %}
+    <!-- Mobile Menu Script -->
     <script>
         document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
             const mobileMenu = document.getElementById('mobile-menu');
             mobileMenu.classList.toggle('hidden');
         });
     </script>
-    {% endif %}
     
     <!-- Auto-dismiss messages after 5 seconds -->
     <script>
         setTimeout(function() {
-            const messages = document.querySelectorAll('[class*="bg-"]');
-            messages.forEach(function(message) {
-                if (message.closest('.fixed')) {
-                    message.remove();
-                }
+            const container = document.getElementById('toast-messages');
+            if (!container) return;
+            container.querySelectorAll('.toast-message').forEach(function(message) {
+                message.remove();
             });
         }, 5000);
     </script>
     
     {% block extra_js %}{% endblock %}
-
+    
     <style>
         @keyframes fade-in-up {
             from {
@@ -167,7 +151,6 @@
             animation: fade-in-up 0.3s ease-out;
         }
         
-        /* Custom checkbox styling for forms */
         input[type="checkbox"]:checked + div {
             background-color: #8fbaf3;
             border-color: #0245a3;
@@ -177,10 +160,62 @@
             opacity: 1;
         }
         
-        /* Smooth transitions for interactive elements */
         .transition-all {
             transition: all 0.3s ease;
+        }
+        
+        body {
+            position: relative;
+        }
+        
+        [style*="position: fixed"] {
+            isolation: isolate;
         }
     </style>
 </body>
 </html>
+    {% block sidebar %}
+    {% if user.is_authenticated and user.user_type == "technician" %}
+    <div class="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-xl z-[1000]">
+        <div class="p-6 text-xl font-bold bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white">
+            Technician Panel
+        </div>
+
+        <ul class="mt-4 space-y-1 text-gray-700">
+            <li>
+                <a href="{% url 'technician_dashboard' %}"
+                class="block px-4 py-2 hover:bg-gray-100">
+                <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                </a>
+            </li>
+
+            <li>
+                <a href="{% url 'technician_settings' %}"
+                class="block px-4 py-2 hover:bg-gray-100">
+                <i class="fas fa-cog mr-2"></i> Settings
+                </a>
+            </li>
+
+            <li>
+                <a href="{% url 'technician_tickets' %}"
+                class="block px-4 py-2 hover:bg-gray-100">
+                <i class="fas fa-ticket-alt mr-2"></i> Tickets
+                </a>
+            </li>
+
+            <li>
+                <a href="{% url 'logout' %}"
+                class="block px-4 py-2 hover:bg-gray-100">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <style>
+        body {
+            padding-left: 16rem;
+        }
+    </style>
+    {% endif %}
+    {% endblock %}
