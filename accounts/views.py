@@ -249,6 +249,7 @@ def technician_directory_view(request):
         'selected_service': service_filter,
         'selected_sort': sort_by,
         'selected_availability': availability_filter,
+        'user_tickets': CreateTicket.objects.filter(user=request.user).exclude(status='resolved').order_by('-created_at'),
         'title': 'Technician Directory - FixIT'
     }
 
@@ -334,22 +335,15 @@ def request_assistance_view(request):
         #TEST
         print("🎫 Creating ticket...")
         try:
-            # Get the most recent ticket for the current user
+            # Use last ticket category if available, otherwise default
             last_ticket = CreateTicket.objects.filter(user=request.user).order_by('-id').first()
-
-            if not last_ticket:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'No ticket found. Please create a ticket first.'
-                }, status=400)
 
             ticket = CreateTicket.objects.create(
                 user=request.user,
                 title=title,
                 description=description,
                 priority=priority or 'medium',
-                #testing
-                category=last_ticket.category if last_ticket else 'Others',  # auto-set category
+                category=last_ticket.category if last_ticket else 'Others',
                 status='open'
             )
             print(f"✅ Ticket created: {ticket.id}")
@@ -449,6 +443,48 @@ def request_assistance_view(request):
             'success': False,
             'error': f'Server error: {str(e)}'
         }, status=500)
+
+@csrf_exempt
+@login_required
+def assign_ticket_to_technician(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST requests allowed'}, status=400)
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        tech_id = data.get('technician_id')
+        ticket_id = data.get('ticket_id')
+        if not tech_id or not ticket_id:
+            return JsonResponse({'success': False, 'error': 'Missing technician_id or ticket_id'}, status=400)
+
+        technician = Technician.objects.get(id=tech_id)
+        technician_user = technician.user_profile.user
+        ticket = get_object_or_404(CreateTicket, id=ticket_id, user=request.user)
+
+        existing = AssistanceRequest.objects.filter(user=request.user, technician=technician, ticket=ticket).exists()
+        if existing:
+            return JsonResponse({'success': True, 'ticket_id': ticket.id, 'message': 'Assistance request already exists for this technician and ticket.'})
+
+        AssistanceRequest.objects.create(
+            user=request.user,
+            technician=technician,
+            ticket=ticket,
+            title=ticket.title,
+            description=ticket.description,
+            priority=ticket.priority,
+            status='pending'
+        )
+
+        Notifications_Technician.objects.create(
+            technician=technician_user,
+            message=f"Ticket #{ticket.id} assigned request from {request.user.username}",
+            ticket=ticket
+        )
+
+        return JsonResponse({'success': True, 'ticket_id': ticket.id, 'message': 'Ticket assigned to technician (pending)'})
+    except Technician.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Technician not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 #//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 @login_required
@@ -1551,14 +1587,41 @@ def technician_tickets_view(request):
     """
     user = request.user
 
-    # Get technician's assigned tickets
-    technician_tickets = CreateTicket.objects.filter(
+    # Get technician's assigned tickets (base)
+    base_qs = CreateTicket.objects.filter(
         assistance_requests__technician__user_profile__user=user
     ).distinct()
 
+    # Filters
+    status = request.GET.get('status', 'all')
+    sort = request.GET.get('sort', 'newest')
+    allowed_statuses = ['open', 'in_progress', 'pending', 'resolved']
+
+    qs = base_qs
+    if status in allowed_statuses:
+        qs = qs.filter(status=status)
+
+    # Sorting
+    if sort == 'oldest':
+        qs = qs.order_by('created_at')
+    elif sort == 'priority':
+        from django.db.models import Case, When, IntegerField
+        qs = qs.annotate(
+            priority_order=Case(
+                When(priority='critical', then=0),
+                When(priority='high', then=1),
+                When(priority='medium', then=2),
+                When(priority='low', then=3),
+                default=4,
+                output_field=IntegerField()
+            )
+        ).order_by('priority_order', '-created_at')
+    else:
+        qs = qs.order_by('-created_at')
+
     # Prepare ticket data with customer info
     ticket_data = []
-    for ticket in technician_tickets:
+    for ticket in qs:
         customer = ticket.user
         customer_info = {
             'full_name': customer.get_full_name() or customer.username,
@@ -1569,16 +1632,19 @@ def technician_tickets_view(request):
                         else customer.username[:2].upper()
         }
 
+        has_review = TechnicianReview.objects.filter(ticket=ticket).exists()
+
         ticket_data.append({
             'ticket': ticket,
-            'customer': customer_info
+            'customer': customer_info,
+            'has_review': has_review,
         })
 
     # Calculate stats
-    total_tickets = technician_tickets.count()
-    open_tickets = technician_tickets.filter(status='open').count()
-    in_progress_tickets = technician_tickets.filter(status='in_progress').count()
-    resolved_tickets = technician_tickets.filter(status='resolved').count()
+    total_tickets = base_qs.count()
+    open_tickets = base_qs.filter(status='open').count()
+    in_progress_tickets = base_qs.filter(status='in_progress').count()
+    resolved_tickets = base_qs.filter(status='resolved').count()
 
     context = {
         'ticket_data': ticket_data,
@@ -1586,7 +1652,9 @@ def technician_tickets_view(request):
         'open_tickets': open_tickets,
         'in_progress_tickets': in_progress_tickets,
         'resolved_tickets': resolved_tickets,
-        'title': 'My Tickets - FixIT'
+        'title': 'My Tickets - FixIT',
+        'status': status,
+        'sort': sort,
     }
 
     return render(request, 'dashboard/technician_tickets.html', context)
@@ -2200,6 +2268,18 @@ def technician_dashboard_view(request):
             'customer': customer_info
         })
 
+    # Technician average response time display
+    tech_avg_response_time_display = "—"
+    profile = getattr(user, 'profile', None)
+    if profile and getattr(profile, 'is_technician', False):
+        tech_obj = getattr(profile, 'technician_profile', None)
+        if tech_obj and tech_obj.average_response_time is not None:
+            try:
+                val = round(float(tech_obj.average_response_time), 1)
+                tech_avg_response_time_display = f"{val}h"
+            except Exception:
+                pass
+
     context = {
         'tickets': technician_tickets.order_by('-created_at')[:5],
         'ticket_data': ticket_data,
@@ -2207,30 +2287,32 @@ def technician_dashboard_view(request):
         'open_tickets': technician_tickets.filter(status='open').count(),
         'in_progress_tickets': technician_tickets.filter(status='in_progress').count(),
         'resolved_tickets': technician_tickets.filter(status='resolved').count(),
+        'tech_avg_response_time_display': tech_avg_response_time_display,
         'title': 'Dashboard - FixIT',
     }
 
     return render(request, 'dashboard/technician_dashboard.html', context)
 
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
+from .models import UserProfile, CreateTicket  # <-- Ensure CreateTicket is imported
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
 
 
-
-
-
-
-
-
-
-
-
-
-
+# Assuming CreateTicket, UserProfile are imported from .models
+# Assuming User is imported if needed, and timezone is imported.
 
 @login_required
 def user_dashboard_view(request):
     """
-    Display user dashboard
+    Display user dashboard and user-specific ticket data.
     """
     user = request.user
 
@@ -2248,10 +2330,57 @@ def user_dashboard_view(request):
         messages.info(request, 'Redirecting to technician dashboard.')
         return redirect('technician_dashboard')
 
+    # --- TICKET DATA ---
+
+    # Base Queryset for the user
+    user_tickets_queryset = CreateTicket.objects.filter(user=user)
+
+    # 1. Fetch Recent Tickets (Last 2)
+    recent_tickets = user_tickets_queryset.order_by('-created_at')[:5]
+
+    # 2. Calculate Quick Stats
+
+    # Define the start of the current month
+    now = timezone.now()
+    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # NEW CONTEXT: Total Tickets Created
+    total_tickets_created = user_tickets_queryset.count()
+
+    # Open Tickets
+    open_tickets_count = user_tickets_queryset.filter(
+        status__in=['open', 'in_progress']
+    ).count()
+
+    # Resolved This Month (based on created_at month/year)
+    resolved_this_month_count = user_tickets_queryset.filter(
+        status='resolved',
+        created_at__gte=start_of_month
+    ).count()
+
+    # Avg. Response Time derived from user's assistance requests
+    ars = AssistanceRequest.objects.filter(user=user).select_related('technician')
+    response_times = [ar.technician.average_response_time for ar in ars if ar.technician and ar.technician.average_response_time is not None]
+    avg_response_time = round(sum(response_times) / len(response_times), 1) if response_times else None
+    avg_response_time_display = f"{avg_response_time}h" if avg_response_time is not None else "—"
+
+    # 3. Latest notifications for the user
+    notifications = Notification.objects.filter(recipient=user).order_by('-created_at')[:5]
+
     context = {
         'user': user,
         'profile': profile,
-        'title': 'User Dashboard - FixIT'
+        'title': 'User Dashboard - FixIT',
+
+        # New Context for Tickets and Stats
+        'recent_tickets': recent_tickets,
+        'open_tickets_count': open_tickets_count,
+        'resolved_this_month_count': resolved_this_month_count,
+        'avg_response_time_display': avg_response_time_display,
+        'notifications': notifications,
+
+        # ADDED VARIABLE
+        'total_tickets_created': total_tickets_created,
     }
     return render(request, 'dashboard/user_dashboard.html', context)
 
@@ -2352,9 +2481,8 @@ def user_profile_view(request):
             # Generate unique filename
             unique_filename = f"{uuid.uuid4()}{file_extension}"
 
-            # The file will automatically upload to Supabase storage
-            # due to our DEFAULT_FILE_STORAGE configuration
-            request.user.profile.profile_picture = unique_filename
+            # Save to configured storage and store reference in database
+            request.user.profile.profile_picture.save(unique_filename, uploaded_file)
             request.user.profile.save()
 
             print(f"✅ Profile picture saved to Supabase: {unique_filename}")
@@ -2512,7 +2640,10 @@ def user_settings_view(request):
             if country:
                 profile.country = country
             if 'profile_picture' in request.FILES:
-                profile.profile_picture = request.FILES['profile_picture']
+                import uuid
+                uploaded_file = request.FILES['profile_picture']
+                unique_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
+                profile.profile_picture.save(unique_filename, uploaded_file)
 
             user.save()
             profile.save()
@@ -2583,7 +2714,10 @@ def technician_settings_view(request):
             if country:
                 profile.country = country
             if 'profile_picture' in request.FILES:
-                profile.profile_picture = request.FILES['profile_picture']
+                import uuid
+                uploaded_file = request.FILES['profile_picture']
+                unique_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
+                profile.profile_picture.save(unique_filename, uploaded_file)
 
             user.save()
             profile.save()
@@ -2794,41 +2928,60 @@ def my_tickets(request):
 
 #PLACEHOLDER
 from django.shortcuts import render
+@login_required
 def available_technicians(request):
-    # Placeholder data
-    technicians = [
-        {'id': 1, 'name': 'John Doe', 'specialty': 'Hardware'},
-        {'id': 2, 'name': 'Jane Smith', 'specialty': 'Software'},
-        {'id': 3, 'name': 'Bob Johnson', 'specialty': 'Network'},
-    ]
+    tech_qs = Technician.objects.select_related('user_profile__user').prefetch_related('specialties').filter(is_available=True)
+    technicians = []
+    for t in tech_qs:
+        user_obj = t.user_profile.user
+        name = user_obj.get_full_name() or user_obj.username
+        specialties = t.get_specialties_list()
+        technicians.append({
+            'id': user_obj.id,
+            'name': name,
+            'specialty': ', '.join(specialties) if specialties else 'General IT Support'
+        })
 
-    return render(request, 'accounts/available_technicians.html', {'technicians': technicians})
+    category = request.GET.get('category', '')
+    return render(request, 'accounts/available_technicians.html', {
+        'technicians': technicians,
+        'category': category,
+    })
 
 
 @login_required
 def my_tickets(request):
-    # Get tickets with prefetch for assistance requests and technicians
-    tickets = CreateTicket.objects.filter(user=request.user).prefetch_related(
+    from django.db.models import Q
+
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    allowed_statuses = ['open', 'pending', 'assigned', 'in_progress', 'resolved']
+
+    tickets_qs = CreateTicket.objects.filter(user=request.user)
+    if q:
+        tickets_qs = tickets_qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
+    if status_filter in allowed_statuses:
+        tickets_qs = tickets_qs.filter(status=status_filter)
+
+    tickets = tickets_qs.prefetch_related(
         'assistance_requests__technician__user_profile__user'
     ).order_by('-created_at')
 
-    # Prepare ticket data with technician info
     ticket_data = []
     for ticket in tickets:
-        ticket_info = {
+        info = {
             'ticket': ticket,
             'assigned_technician': None
         }
-
-        # Check if there's an assistance request for this ticket
-        assistance_request = ticket.assistance_requests.first()
-        if assistance_request and assistance_request.technician:
-            ticket_info['assigned_technician'] = assistance_request.technician
-
-        ticket_data.append(ticket_info)
+        ar = ticket.assistance_requests.first()
+        if ar and ar.technician:
+            info['assigned_technician'] = ar.technician
+        ticket_data.append(info)
 
     return render(request, 'accounts/my_tickets.html', {
-        'ticket_data': ticket_data
+        'ticket_data': ticket_data,
+        'q': q,
+        'status_filter': status_filter,
     })
 
 
@@ -2898,10 +3051,20 @@ def ticket_details_view(request, ticket_id):
     if ar and ar.technician:
         assigned_technician = ar.technician
     
+    # Fetch the current user's review for this ticket if available
+    user_review = None
+    if assigned_technician:
+        user_review = TechnicianReview.objects.filter(
+            technician=assigned_technician,
+            user=request.user,
+            ticket=ticket
+        ).order_by('-created_at').first()
+
     context = {
         'ticket': ticket,
         'title': f'Ticket #{ticket.id} - {ticket.title}',
-        'assigned_technician': assigned_technician
+        'assigned_technician': assigned_technician,
+        'user_review': user_review,
     }
     return render(request, 'dashboard/ticket_details.html', context)
 
@@ -2919,7 +3082,7 @@ def technician_ticket_details_view(request, ticket_id):
     if assigned_technician:
         review = TechnicianReview.objects.filter(
             technician=assigned_technician,
-            user=ticket.user
+            ticket=ticket
         ).order_by('-created_at').first()
 
     context = {
@@ -2943,10 +3106,8 @@ def resolve_ticket(request, ticket_id):
         if ticket.status == 'resolved':
             ar = ticket.assistance_requests.first()
             assigned_technician = ar.technician if ar and ar.technician else None
-            if assigned_technician and TechnicianReview.objects.filter(
-                technician=assigned_technician,
-                user=ticket.user
-            ).exists():
+            has_review = TechnicianReview.objects.filter(ticket=ticket).exists()
+            if has_review:
                 messages.error(request, "Cannot unresolve this ticket because a review has already been submitted.")
                 return redirect('technician_tickets')
             ticket.status = 'open'
@@ -2982,6 +3143,38 @@ def resolve_ticket(request, ticket_id):
     return redirect('technician_tickets')
 
 @login_required
+def start_work_ticket(request, ticket_id):
+    user = request.user
+    ticket = get_object_or_404(
+        CreateTicket,
+        id=ticket_id,
+        assistance_requests__technician__user_profile__user=user
+    )
+    if request.method == 'POST':
+        if ticket.status == 'resolved':
+            messages.error(request, 'Cannot start work on a resolved ticket.')
+            return redirect('technician_tickets')
+        if ticket.status == 'in_progress':
+            messages.info(request, f"Ticket #{ticket.id} is already in progress.")
+            return redirect('technician_tickets')
+        ticket.status = 'in_progress'
+        ticket.save()
+        Notifications_Technician.objects.create(
+            technician=user,
+            message=f"Started work on ticket #{ticket.id}",
+            ticket=None
+        )
+        Notification.objects.create(
+            recipient=ticket.user,
+            sender=user,
+            ticket=ticket,
+            message=f"Your ticket #{ticket.id} '{ticket.title}' is now being worked on."
+        )
+        messages.success(request, f"Ticket #{ticket.id} set to In Progress.")
+        return redirect('technician_tickets')
+    return redirect('technician_tickets')
+
+@login_required
 def submit_ticket_review(request, ticket_id):
     """User submits rating/comment for the technician on a resolved ticket"""
     if request.method != 'POST':
@@ -3013,6 +3206,7 @@ def submit_ticket_review(request, ticket_id):
     review, created = TechnicianReview.objects.get_or_create(
         technician=technician,
         user=request.user,
+        ticket=ticket,
         defaults={
             'rating': rating,
             'comment': comment
@@ -3038,4 +3232,58 @@ def submit_ticket_review(request, ticket_id):
     )
 
     messages.success(request, 'Thank you for your feedback!')
-    return redirect('my_tickets')
+    return redirect('ticket_details', ticket_id=ticket_id)
+
+
+# views.py (Technician side)
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from django.db import transaction  # Import transaction for safety
+
+
+def accept_request_view(request, request_id):
+    # Ensure the user is authenticated and has a technician profile
+    if not request.user.is_authenticated or not hasattr(request.user,
+                                                        'profile') or not request.user.profile.is_technician:
+        messages.error(request, "Access denied. You must be an authorized technician.")
+        return redirect('home')
+
+    assistance_request = get_object_or_404(AssistanceRequest, id=request_id)
+
+    # Access the Django User object attached to the Technician profile
+    technician_user = assistance_request.technician.user
+
+    # 1. Security Check: Ensure the logged-in user is the technician named in the request
+    if technician_user != request.user:
+        messages.error(request, "You are not authorized to accept this request.")
+        return redirect('technician_dashboard')
+
+    # 2. Status Check: Ensure the ticket's underlying status is compatible
+    if assistance_request.status == 'pending':
+
+        # Use a database transaction to ensure both updates happen successfully, or neither does.
+        with transaction.atomic():
+
+            # a. Update the AssistanceRequest status
+            assistance_request.status = 'accepted'
+            assistance_request.save()
+
+            # b. Update the main CreateTicket
+            ticket = assistance_request.ticket
+
+            # CRITICAL CHANGE: Assign the Django User object
+            ticket.technician = technician_user
+            ticket.status = 'assigned'
+            ticket.save()
+
+            # c. OPTIONAL: Reject any other pending requests for this same ticket
+            AssistanceRequest.objects.filter(
+                ticket=ticket,
+                status='pending'
+            ).exclude(id=request_id).update(status='rejected')
+
+        messages.success(request, f"Ticket #{ticket.id} has been successfully assigned to you.")
+    else:
+        messages.error(request, "This request has already been handled or is invalid.")
+
+    return redirect('technician_dashboard')

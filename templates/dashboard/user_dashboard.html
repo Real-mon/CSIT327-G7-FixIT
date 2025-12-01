@@ -9,9 +9,7 @@
     <div class="flex">
         
 
-        <!-- Main Content -->
         <div class="flex-1 p-8">
-            <!-- Welcome Header -->
             <div class="mb-8">
                 <h1 class="text-3xl font-bold text-[#0245a3] mb-2">Welcome back, {{ user.username }}!</h1>
                 <p class="text-[#0245a3]">Here's what's happening with your support requests</p>
@@ -22,16 +20,14 @@
 
 
 
-                <!-- Left Column - Troubleshooting & Create Ticket -->
                 <div class="space-y-8">
-                    <!-- Recommended Troubleshooting -->
                     <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
                         <h2 class="text-xl font-bold text-white mb-4">Recommended Troubleshooting</h2>
                         <div class="space-y-4">
                             <div class="space-y-3">
                                 <h3 class="font-semibold text-white">Popular guides</h3>
-                                
-                                <!-- Guide 1 -->
+                                <div class="space-y-3 overflow-y-auto" style="max-height: 240px;">
+
                                 <div class="bg-white/20 rounded-xl p-4 border border-white/20">
                                     <h4 class="font-semibold text-white mb-1">Computer Running Slow?</h4>
                                     <p class="text-white/70 text-sm mb-2">Quick tips to speed up your computer performance</p>
@@ -40,8 +36,7 @@
                                         <span>5 min read</span>
                                     </div>
                                 </div>
-                                
-                                <!-- Guide 2 -->
+
                                 <div class="bg-white/20 rounded-xl p-4 border border-white/20">
                                     <h4 class="font-semibold text-white mb-1">Wi-Fi Connection Problems</h4>
                                     <p class="text-white/70 text-sm mb-2">Step-by-step guide to resolve connectivity issues</p>
@@ -50,11 +45,29 @@
                                         <span>10 min read</span>
                                     </div>
                                 </div>
+
+                                <div class="bg-white/20 rounded-xl p-4 border border-white/20">
+                                    <h4 class="font-semibold text-white mb-1">Password Reset Issues</h4>
+                                    <p class="text-white/70 text-sm mb-2">What to do when you can't reset your password</p>
+                                    <div class="flex items-center text-white/60 text-xs">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        <span>7 min read</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white/20 rounded-xl p-4 border border-white/20">
+                                    <h4 class="font-semibold text-white mb-1">Printer Not Working</h4>
+                                    <p class="text-white/70 text-sm mb-2">Basic checks to fix common printer problems</p>
+                                    <div class="flex items-center text-white/60 text-xs">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        <span>6 min read</span>
+                                    </div>
+                                </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Create Ticket -->
                     <div class="bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-2xl p-6 text-white text-center">
                         <h3 class="text-xl font-bold mb-3">Need Help?</h3>
                         <p class="text-white/80 mb-4">Create a new support ticket and get expert assistance</p>
@@ -66,70 +79,58 @@
                     </div>
                 </div>
 
-                <!-- Right Column - Stats & Recent Tickets -->
                 <div class="lg:col-span-2 space-y-8">
-                    <!-- Quick Stats -->
                     <div class="grid grid-cols-3 gap-4">
                         <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6 text-center">
-                            <div class="text-2xl font-bold text-white mb-1">2</div>
+                            <div class="text-2xl font-bold text-white mb-1">{{ open_tickets_count }}</div>
                             <div class="text-white/70 text-sm">Open Tickets</div>
                         </div>
                         <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6 text-center">
-                            <div class="text-2xl font-bold text-white mb-1">8</div>
+                            <div class="text-2xl font-bold text-white mb-1">{{ resolved_this_month_count }}</div>
                             <div class="text-white/70 text-sm">Resolved This Month</div>
                         </div>
                         <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6 text-center">
-                            <div class="text-2xl font-bold text-white mb-1">2.5h</div>
+                            <div class="text-2xl font-bold text-white mb-1">{{ avg_response_time_display }}</div>
                             <div class="text-white text-sm">Avg. Response Time</div>
                         </div>
                     </div>
 
-                    <!-- Recent Tickets -->
                     <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-xl font-bold text-white">Recent Tickets</h2>
                             <a href="{% url 'my_tickets' %}" class="text-white/80 hover:text-white text-sm font-semibold">View all</a>
                         </div>
-                        <div class="space-y-4">
-                            <!-- Ticket 1 -->
+                        <div class="space-y-4 overflow-y-auto" style="max-height: 360px;">
+                            {% for ticket in recent_tickets %}
                             <div class="bg-white/20 rounded-xl p-4 border border-white/20">
                                 <div class="flex justify-between items-start mb-2">
-                                    <div class="font-semibold text-white">#4321</div>
-                                    <div class="text-white/60 text-sm">2 hours ago</div>
+                                    <div class="font-semibold text-white">#{{ ticket.id }}</div>
+                                    <div class="text-white/60 text-sm">{{ ticket.created_at|timesince }} ago</div>
                                 </div>
-                                <h4 class="font-semibold text-white mb-1">Laptop won't boot</h4>
-                                <p class="text-white/70 text-sm">Last update: Technician assigned</p>
+                                <h4 class="font-semibold text-white mb-1">{{ ticket.title }}</h4>
+                                <p class="text-white/70 text-sm">Status: {{ ticket.status|title }}</p>
                             </div>
-                            
-                            <!-- Ticket 2 -->
-                            <div class="bg-white/20 rounded-xl p-4 border border-white/20">
-                                <div class="flex justify-between items-start mb-2">
-                                    <div class="font-semibold text-white">#4320</div>
-                                    <div class="text-white/60 text-sm">1 day ago</div>
-                                </div>
-                                <h4 class="font-semibold text-white">Phone screen replacement</h4>
+                            {% empty %}
+                            <div class="p-4 text-white/70 text-center">
+                                You have no recent support tickets.
                             </div>
+                            {% endfor %}
                         </div>
                     </div>
 
 
-            <!-- Notification -->
-            <div class="mb-6">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">Notifications</h2>
-
-    <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-3 rounded-lg shadow-md" role="alert">
-        <p class="font-bold text-lg">Quick Reminder</p>
-        <p class="text-base">Please verify your account details by the end of the week.</p>
-        <p class="text-sm text-gray-500 mt-1">Date: 2025-11-19 12:00 PM</p>
-    </div>
-
-    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-3 rounded-lg shadow-md" role="alert">
-        <p class="font-bold text-lg">Maintenance Notice</p>
-        <p class="text-base">Minor service maintenance is scheduled for Thursday.</p>
-        <p class="text-sm text-gray-500 mt-1">Date: 2025-11-20 08:00 AM</p>
-    </div>
-</div>
-
+           <div class="mb-6">
+                <h2 class="text-2xl font-bold text-[#0245a3] mb-4">Notifications</h2>
+                <div class="space-y-3 overflow-y-auto" style="max-height: 240px;">
+                    {% for n in notifications %}
+                    <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-lg shadow-md" role="alert">
+                        <p class="font-bold text-lg">Notification</p>
+                        <p class="text-base">{{ n.message }}</p>
+                        <p class="text-sm text-gray-500 mt-1">{{ n.created_at|date:"Y-m-d H:i" }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="text-[#0245a3]">No notifications.</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>

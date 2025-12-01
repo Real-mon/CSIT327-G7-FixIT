@@ -21,12 +21,29 @@
                 <p class="text-[#0245a3]/80 text-lg">View all your submitted support tickets</p>
             </div>
 
-            <!-- Create New Ticket Button -->
             <div class="max-w-6xl mx-auto mb-6">
-                <a href="{% url 'create_ticket' %}" class="inline-flex items-center bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl px-6 py-3 hover:opacity-90 transition">
-                    <i class="fas fa-plus-circle mr-2"></i>
-                    Create New Ticket
-                </a>
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <a href="{% url 'create_ticket' %}" class="inline-flex items-center bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] text-white font-semibold rounded-xl px-6 py-3 hover:opacity-90 transition">
+                        <i class="fas fa-plus-circle mr-2"></i>
+                        Create New Ticket
+                    </a>
+                    <form method="get" action="" class="flex items-center gap-3">
+                        <div class="relative">
+                            <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search tickets"
+                                   class="w-64 bg-white border border-[#8fbaf3]/50 rounded-xl px-4 py-2 text-[#0245a3] placeholder-[#0245a3]/50 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                            <span class="absolute right-3 top-2.5 text-[#0245a3]/50"><i class="fas fa-search"></i></span>
+                        </div>
+                        <select name="status" class="bg-white border border-[#8fbaf3]/50 rounded-xl px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                            <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+                            <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="assigned" {% if status_filter == 'assigned' %}selected{% endif %}>Assigned</option>
+                            <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                        <button type="submit" class="bg-[#0245a3] text-white font-semibold rounded-xl px-4 py-2 hover:bg-[#1a5bb3] transition">Filter</button>
+                    </form>
+                </div>
             </div>
 
             <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -34,27 +51,26 @@
                 {% with ticket=item.ticket assigned_technician=item.assigned_technician %}
                 <div class="bg-white rounded-2xl shadow-lg border border-[#8fbaf3]/20 p-6 flex flex-col justify-between">
                     <div>
-                        <!-- Ticket Header with Status -->
                         <div class="flex justify-between items-start mb-4">
                             <h2 class="text-xl font-semibold text-[#0245a3]">{{ ticket.title }}</h2>
                             <span class="{% if ticket.status == 'open' %}bg-green-100 text-green-800
                                        {% elif ticket.status == 'pending' %}bg-yellow-100 text-yellow-800
-                                       {% else %}bg-blue-100 text-blue-800{% endif %} 
+                                       {% elif ticket.status == 'assigned' or ticket.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                       {% elif ticket.status == 'resolved' %}bg-purple-100 text-purple-800
+                                       {% else %}bg-gray-100 text-gray-800{% endif %}
                                        text-xs font-semibold px-3 py-1 rounded-full">
                                 {{ ticket.status|title }}
                             </span>
                         </div>
-                        
-                        <!-- Ticket Description -->
+
                         <p class="text-sm text-[#0245a3]/80 mb-4">{{ ticket.description|truncatewords:25 }}</p>
 
-                        <!-- In the technician assignment section -->
                         {% if assigned_technician %}
                         <div class="mb-4 p-3 bg-[#8fbaf3]/10 rounded-lg border border-[#8fbaf3]/30">
                             <div class="flex items-center space-x-3">
                                 {% if assigned_technician.profile_picture_url %}
-                                <img src="{{ assigned_technician.profile_picture_url }}" 
-                                    alt="{{ assigned_technician.full_name }}" 
+                                <img src="{{ assigned_technician.profile_picture_url }}"
+                                    alt="{{ assigned_technician.full_name }}"
                                     class="w-10 h-10 rounded-full object-cover border-2 border-[#8fbaf3]">
                                 {% else %}
                                 <div class="w-10 h-10 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-[#8fbaf3]">
@@ -82,13 +98,12 @@
                             </p>
                         </div>
                         {% endif %}
-                        <!-- Ticket Metadata -->
                         <div class="flex justify-between items-center text-sm text-[#0245a3]/70 pt-3 border-t border-[#8fbaf3]/20 flex-wrap">
                             <span class="mr-4">
                                 <span class="font-semibold">Category:</span> {{ ticket.category|capfirst }}
                             </span>
                             <span class="mr-4">
-                                <span class="font-semibold">Priority:</span> 
+                                <span class="font-semibold">Priority:</span>
                                 <span class="{% if ticket.priority == 'high' %}text-red-600 font-bold
                                            {% elif ticket.priority == 'medium' %}text-orange-600
                                            {% else %}text-green-600{% endif %}">
@@ -101,37 +116,36 @@
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
                     <div class="mt-4 pt-4 border-t border-[#8fbaf3]/20 flex space-x-4">
 
                         {% if not assigned_technician %}
-                        <a href="{% url 'technician_directory' %}"
-                           class="flex-1 inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-[#1a5bb3] transition">
-                            <i class="fas fa-user-cog mr-2"></i> Find Technician
-                        </a>
-
+                            <a href="{% url 'technician_directory' %}?ticket={{ ticket.id }}"
+                               class="flex-1 inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-[#1a5bb3] transition">
+                                <i class="fas fa-user-cog mr-2"></i> Find Technician
+                            </a>
+                            <a href="{% url 'delete_ticket' ticket.id %}"
+                               class="flex-1 inline-flex justify-center items-center bg-red-600 text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-red-700 transition">
+                                <i class="fas fa-times mr-2"></i> Cancel Ticket
+                            </a>
 
                         {% else %}
-                        <a href="{% url 'ticket_details' ticket.id %}"
-                           class="px-4 bg-white/30 border border-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl py-2 hover:bg-white/40 transition inline-flex items-center justify-center">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="{% url 'user_message' %}?technician={{ assigned_technician.id }}&ticket={{ ticket.id }}"
-                           class="flex-1 inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-[#1a5bb3] transition">
-                            <i class="fas fa-comments mr-2"></i> Chat Technician
-                        </a>
-                        {% endif %}
-                        {% if ticket.status == 'resolved' and assigned_technician %}
-                        <a href="{% url 'ticket_details' ticket.id %}#rating"
-                           class="flex-1 inline-flex justify-center items-center bg-yellow-500 text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-yellow-600 transition">
-                            <i class="fas fa-star mr-2"></i> Review
-                        </a>
-                        {% else %}
-                        <a href="{% url 'delete_ticket' ticket.id %}"
-                           class="flex-1 inline-flex justify-center items-center bg-red-600 text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-red-700 transition">
-                            <i class="fas fa-times mr-2"></i> Cancel Ticket
-                        </a>
-                        {% endif %}
+                            <a href="{% url 'ticket_details' ticket.id %}"
+                               class="px-4 bg-white/30 border border-[#8fbaf3] text-[#0245a3] font-semibold rounded-xl py-2 hover:bg-white/40 transition inline-flex items-center justify-center">
+                                <i class="fas fa-eye mr-2"></i> Details
+                            </a>
+                            <a href="{% url 'user_message' %}?technician={{ assigned_technician.id }}&ticket={{ ticket.id }}"
+                               class="flex-1 inline-flex justify-center items-center bg-[#0245a3] text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-[#1a5bb3] transition">
+                                <i class="fas fa-comments mr-2"></i> Chat Technician
+                            </a>
+
+                            {% if ticket.status == 'resolved' %}
+                            <a href="{% url 'ticket_details' ticket.id %}#rating"
+                               class="flex-1 inline-flex justify-center items-center bg-yellow-500 text-white font-semibold rounded-xl py-2 px-4 text-base hover:bg-yellow-600 transition">
+                                <i class="fas fa-star mr-2"></i> Review
+                            </a>
+                            {% endif %}
+
+                            {% endif %}
 
 
                     </div>

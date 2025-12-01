@@ -1,4 +1,4 @@
-<div class="fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] bg-white/20 backdrop-blur-lg border-r border-[#8fbaf3]/40 p-6 z-[1000] overflow-y-auto">
+<div class="fixed top-0 left-0 w-64 h-screen bg-white/20 backdrop-blur-lg border-r border-[#8fbaf3]/40 p-6 z-[1000] overflow-y-auto">
     <div class="flex items-center space-x-3 mb-8">
         <div class="w-10 h-10 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-xl flex items-center justify-center">
             <i class="fas fa-tools text-[#0245a3]"></i>
@@ -28,6 +28,12 @@
                   {% if current == 'technician_directory' %}bg-white/20 text-[#0245a3] font-semibold{% else %}text-[#0245a3] hover:bg-white/40{% endif %}">
             <i class="fas fa-user-cog w-5"></i>
             <span>Technicians</span>
+        </a>
+        <a href="{% url 'available-technicians' %}"
+           class="flex items-center space-x-3 px-4 py-3 rounded-xl transition 
+                  {% if current == 'available-technicians' %}bg-white/20 text-[#0245a3] font-semibold{% else %}text-[#0245a3] hover:bg-white/40{% endif %}">
+            <i class="fas fa-user-friends w-5"></i>
+            <span>Available Technicians</span>
         </a>
         <a href="{% url 'user_message' %}"
            class="flex items-center space-x-3 px-4 py-3 rounded-xl transition 

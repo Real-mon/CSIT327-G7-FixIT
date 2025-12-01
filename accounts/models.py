@@ -159,13 +159,14 @@ class TechnicianReview(models.Model):
     """
     technician = models.ForeignKey(Technician, on_delete=models.CASCADE, related_name='reviews')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='technician_reviews')
+    ticket = models.ForeignKey('CreateTicket', on_delete=models.CASCADE, related_name='reviews', null=True, blank=True)
     rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ['technician', 'user']
+        unique_together = ['technician', 'user', 'ticket']
         verbose_name = 'Technician Review'
         verbose_name_plural = 'Technician Reviews'
 

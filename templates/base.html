@@ -27,19 +27,21 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <a href="{% url 'dashboard' %}" class="flex-shrink-0 flex items-center text-white text-xl font-bold">
-                        <i class="fas fa-tools mr-2"></i>
-                        FixIT
-                    </a>
                 </div>
                 
                 <div class="hidden md:ml-6 md:flex md:items-center md:space-x-4">
                     {% if user.is_authenticated %}
-                        <a href="{% url 'profile_update' %}" class="text-white hover:bg-white/20 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            <i class="fas fa-user-edit mr-1"></i> Profile
-                        </a>
-                        <a href="{% url 'logout' %}" class="text-white hover:bg-white/20 px-3 py-2 rounded-md text-sm font-medium transition duration-200">
-                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        <a href="{% url 'profile_update' %}" class="inline-flex items-center space-x-2 text-white hover:bg-white/20 px-3 py-2 rounded-md transition duration-200">
+                            {% with avatar=user.profile.get_profile_picture_url %}
+                                {% if avatar %}
+                                    <img src="{{ avatar }}" alt="{{ user.get_full_name|default:user.username }}" class="w-8 h-8 rounded-full border-2 border-white/40 object-cover">
+                                {% else %}
+                                    <span class="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center text-xs font-semibold border-2 border-white/40">
+                                        {{ user.username|slice:":2"|upper }}
+                                    </span>
+                                {% endif %}
+                            {% endwith %}
+                            <span class="text-sm font-medium">{{ user.get_full_name|default:user.username }}</span>
                         </a>
                     {% endif %}
                 </div>
@@ -59,10 +61,16 @@
             <div class="px-2 pt-2 pb-3 space-y-1 bg-[#0245a3]">
                 {% if user.is_authenticated %}
                     <a href="{% url 'profile_update' %}" class="text-white hover:bg-white/20 block px-3 py-2 rounded-md text-base font-medium">
-                        <i class="fas fa-user-edit mr-2"></i> Profile
-                    </a>
-                    <a href="{% url 'logout' %}" class="text-white hover:bg-white/20 block px-3 py-2 rounded-md text-base font-medium">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                        {% with avatar=user.profile.get_profile_picture_url %}
+                            {% if avatar %}
+                                <img src="{{ avatar }}" alt="{{ user.get_full_name|default:user.username }}" class="w-8 h-8 rounded-full border-2 border-white/40 object-cover inline-block">
+                            {% else %}
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-white text-xs font-semibold border-2 border-white/40">
+                                    {{ user.username|slice:":2"|upper }}
+                                </span>
+                            {% endif %}
+                        {% endwith %}
+                        <span class="ml-2 align-middle">{{ user.get_full_name|default:user.username }}</span>
                     </a>
                 {% endif %}
             </div>
