@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from django.contrib.auth import views as auth_views # Import Django's built-in auth views
 
 
 urlpatterns = [
@@ -11,7 +12,27 @@ urlpatterns = [
     path('role-select/', views.role_select_view, name='role_select'),
     path('profile/user/', views.user_profile_view, name='user_profile'),
     path('profile/technician/', views.technician_profile_view, name='technician_profile'),
-    path('password_reset/', views.password_reset_view, name='password_reset'),
+    # --- Standard Password Reset (Forgot Password) ---
+    # 1. Start: User enters email (uses your password_reset_form.html)
+    path('password_reset/', auth_views.PasswordResetView.as_view(
+        template_name='registration/password_reset_form.html'
+    ), name='password_reset'),  # <--- Use Django's View
+
+    # 2. Done: Email confirmation page (uses your password_reset_done.html)
+    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='registration/password_reset_done.html'
+    ), name='password_reset_done'),
+
+    # 3. Confirm: Link with token (uses your password_reset_confirm.html)
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='registration/password_reset_confirm.html'
+    ), name='password_reset_confirm'),
+
+    # 4. Complete: Final success page (uses your password_reset_complete.html)
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='registration/password_reset_complete.html'
+    ), name='password_reset_complete'),
+
     path('change-password/', views.change_password_view, name='change_password'),  # ADD THIS
     path('technician-dashboard/', views.technician_dashboard_view, name='technician_dashboard'),
     path('user-dashboard/', views.user_dashboard_view, name='user_dashboard'),
@@ -59,7 +80,7 @@ urlpatterns = [
     path('create-ticket/', views.create_ticket, name='create_ticket'),
     path('my-tickets/', views.my_tickets, name='my_tickets'),  #VIEW
 path('available-technicians/', views.available_technicians, name='available-technicians'),
-    
+
     path('ticket/<int:ticket_id>/', views.ticket_details_view, name='ticket_details'),
     path('ticket/<int:ticket_id>/review/', views.submit_ticket_review, name='submit_ticket_review'),
     path('technician/ticket/<int:ticket_id>/', views.technician_ticket_details_view, name='technician_ticket_details'),
