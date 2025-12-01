@@ -239,8 +239,21 @@
             <i class="fas fa-times"></i>
         </button>
         <h3 class="text-xl font-bold text-[#0245a3] mb-4">Request Assistance</h3>
-        <form id="assistanceForm">
-            <div class="space-y-4">
+                <form id="assistanceForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Action</label>
+                            <div class="flex gap-4">
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" name="assist_action" value="create" checked class="accent-[#0245a3]">
+                                    <span class="text-[#0245a3] text-sm">Create new ticket</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="radio" name="assist_action" value="assign" class="accent-[#0245a3]">
+                                    <span class="text-[#0245a3] text-sm">Assign existing ticket</span>
+                                </label>
+                            </div>
+                        </div>
                 <div>
                     <label class="block text-[#0245a3] text-sm font-medium mb-2">Title</label>
                     <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
@@ -292,23 +305,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 <form id="assistanceForm">
                     <input type="hidden" name="technician_id" id="technicianIdInput">
                     <div class="space-y-4">
-                        <div>
-                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Title *</label>
+                        <div id="createFields">
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Title *</nlabel>
                             <input type="text" name="title" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
                                    placeholder="Brief description of your issue" required maxlength="200">
                         </div>
-                        <div>
-                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Description *</label>
+                        <div id="createDesc">
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Description *</nlabel>
                             <textarea name="description" rows="4" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]"
                                       placeholder="Detailed description of your problem..." required></textarea>
                         </div>
-                        <div>
-                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Priority *</label>
+                        <div id="createPriority">
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Priority *</nlabel>
                             <select name="priority" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
                                 <option value="low">Low</option>
                                 <option value="medium" selected>Medium</option>
                                 <option value="high">High</option>
                                 <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+
+                        <div id="assignFields" class="hidden">
+                            <label class="block text-[#0245a3] text-sm font-medium mb-2">Select existing ticket</label>
+                            <select id="existingTicketSelect" class="w-full border border-[#8fbaf3] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0245a3]">
+                                <option value="">Choose a ticket…</option>
+                                {% for t in user_tickets %}
+                                <option value="{{ t.id }}">#{{ t.id }} · {{ t.title }} ({{ t.status|title }})</option>
+                                {% empty %}
+                                <option value="" disabled>No tickets available</option>
+                                {% endfor %}
                             </select>
                         </div>
                     </div>
@@ -339,6 +364,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeBtn = document.getElementById('modalCloseBtn');
     const cancelBtn = document.getElementById('modalCancelBtn');
     const technicianIdInput = document.getElementById('technicianIdInput');
+    const assignFields = document.getElementById('assignFields');
+    const createFields = document.getElementById('createFields');
+    const createDesc = document.getElementById('createDesc');
+    const createPriority = document.getElementById('createPriority');
+    const ticketSelect = document.getElementById('existingTicketSelect');
+    const urlParams = new URLSearchParams(window.location.search);
+    const prefillTicketId = urlParams.get('ticket');
 
     let isModalOpen = false;
 
@@ -430,6 +462,35 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
 
+        // Toggle fields based on action
+        const actionRadios = document.querySelectorAll('input[name="assist_action"]');
+        actionRadios.forEach(r => {
+            r.addEventListener('change', () => {
+                const action = document.querySelector('input[name="assist_action"]:checked')?.value || 'create';
+                const isAssign = action === 'assign';
+                assignFields.classList.toggle('hidden', !isAssign);
+                createFields.classList.toggle('hidden', isAssign);
+                createDesc.classList.toggle('hidden', isAssign);
+                createPriority.classList.toggle('hidden', isAssign);
+                
+                form.querySelector('[name="title"]').required = !isAssign;
+                form.querySelector('[name="description"]').required = !isAssign;
+            });
+        });
+
+        if (prefillTicketId && ticketSelect) {
+            const assignRadio = document.querySelector('input[name="assist_action"][value="assign"]');
+            if (assignRadio) assignRadio.checked = true;
+            assignFields.classList.remove('hidden');
+            createFields.classList.add('hidden');
+            createDesc.classList.add('hidden');
+            createPriority.classList.add('hidden');
+            form.querySelector('[name="title"]').required = false;
+            form.querySelector('[name="description"]').required = false;
+            const option = Array.from(ticketSelect.options).find(o => o.value === prefillTicketId);
+            if (option) ticketSelect.value = prefillTicketId;
+        }
+
         // Form submission
         if (form) {
             form.onsubmit = function(e) {
@@ -441,6 +502,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const title = formData.get('title').trim();
                 const description = formData.get('description').trim();
                 const priority = formData.get('priority');
+                const action = formData.get('assist_action') || (prefillTicketId ? 'assign' : 'create');
+                const selectedTicketId = ticketSelect ? (ticketSelect.value || prefillTicketId || '') : '';
 
                 console.log('Form data:', { technicianId, title, description, priority });
 
@@ -450,9 +513,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     return false;
                 }
 
-                if (!title || !description) {
-                    alert('Please fill in all required fields');
-                    return false;
+                if (action === 'create') {
+                    if (!title || !description) {
+                        alert('Please fill in all required fields');
+                        return false;
+                    }
+                } else {
+                    if (!selectedTicketId) {
+                        alert('Please select a ticket to assign');
+                        return false;
+                    }
                 }
 
                 const csrfToken = getCSRFToken();
@@ -472,7 +542,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const originalOpacity = submitBtn.style.opacity;
                 submitBtn.style.opacity = '0.7';
 
-                fetch('{% url "request_assistance" %}', {
+                const endpoint = action === 'assign' ? '{% url "assign_ticket_to_technician" %}' : '{% url "request_assistance" %}';
+                const body = action === 'assign'
+                    ? JSON.stringify({ technician_id: parseInt(technicianId), ticket_id: parseInt(selectedTicketId) })
+                    : JSON.stringify({ technician_id: parseInt(technicianId), title: title, description: description, priority: priority });
+
+                fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -480,12 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     credentials: 'include', // Important for sending cookies
-                    body: JSON.stringify({
-                        technician_id: parseInt(technicianId), // Ensure it's a number
-                        title: title,
-                        description: description,
-                        priority: priority
-                    })
+                    body
                 })
                 .then(response => {
                     console.log('Response status:', response.status, response.statusText);
@@ -496,14 +566,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     if (!response.ok) {
-                        // Try to get error message from response
                         return response.text().then(text => {
                             console.log('Error response text:', text);
-                            // Check if it's HTML (login page)
                             if (text.includes('<!DOCTYPE html>') || text.includes('Sign In')) {
                                 throw new Error('Session expired. Please log in again.');
                             }
-                            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                            try {
+                                const data = JSON.parse(text);
+                                const msg = data.error || data.message || `Server error: ${response.status} ${response.statusText}`;
+                                throw new Error(msg);
+                            } catch (_) {
+                                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                            }
                         });
                     }
                     
@@ -512,7 +586,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     console.log('Response data:', data);
                     if (data.success) {
-                        alert('✅ Request sent successfully! The technician has been notified.');
+                        const msg = action === 'assign' ? 'Ticket assignment request sent to technician.' : 'Request sent successfully! The technician has been notified.';
+                        alert('✅ ' + msg);
                         closeModal();
                         
                         // Optional: Redirect to tickets page

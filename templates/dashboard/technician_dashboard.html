@@ -47,7 +47,7 @@
 
                 <!-- Agent Response Time -->
                 <div class="bg-white rounded-2xl shadow-lg border border-[#8fbaf3]/20 p-6">
-                    <div class="text-3xl font-bold text-[#0245a3] mb-2">1.2hrs</div>
+                    <div class="text-3xl font-bold text-[#0245a3] mb-2">{{ tech_avg_response_time_display }}</div>
                     <div class="text-lg font-medium text-[#0245a3]">Agent Response Time</div>
                     <div class="text-sm text-[#0245a3]/70 mt-1">Average first response time</div>
                 </div>
@@ -64,7 +64,7 @@
            <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg border border-[#8fbaf3]/20 p-6">
     <h2 class="text-xl font-semibold text-[#0245a3] mb-6">Recent Activity</h2>
 
-    <div class="space-y-4">
+    <div class="space-y-4 max-h-72 overflow-y-auto pr-2">
         {% for ticket in tickets %}
         <div class="flex items-start space-x-4 pb-4 border-b border-[#8fbaf3]/20">
 

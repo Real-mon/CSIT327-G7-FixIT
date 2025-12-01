@@ -37,25 +37,28 @@
             </div>
 
             <!-- Filter Options -->
-            <div class="max-w-6xl mx-auto mb-6 flex flex-wrap gap-4">
-                <div class="flex items-center space-x-2">
-                    <label class="text-[#0245a3] font-medium">Filter by:</label>
-                    <select class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
-                        <option value="all">All Tickets</option>
-                        <option value="open">Open</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="pending">Pending</option>
-                        <option value="resolved">Resolved</option>
-                    </select>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <label class="text-[#0245a3] font-medium">Sort by:</label>
-                    <select class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="priority">Priority</option>
-                    </select>
-                </div>
+            <div class="max-w-6xl mx-auto mb-6">
+                <form method="get" class="flex flex-wrap gap-4 items-center">
+                    <div class="flex items-center space-x-2">
+                        <label class="text-[#0245a3] font-medium">Filter by:</label>
+                        <select name="status" class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
+                            <option value="all" {% if status == 'all' or not status %}selected{% endif %}>All Tickets</option>
+                            <option value="open" {% if status == 'open' %}selected{% endif %}>Open</option>
+                            <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="resolved" {% if status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <label class="text-[#0245a3] font-medium">Sort by:</label>
+                        <select name="sort" class="bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
+                            <option value="newest" {% if sort == 'newest' or not sort %}selected{% endif %}>Newest First</option>
+                            <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+                            <option value="priority" {% if sort == 'priority' %}selected{% endif %}>Priority</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="bg-[#0245a3] text-white font-semibold rounded-xl px-4 py-2 hover:bg-[#1a5bb3] transition">Apply</button>
+                </form>
             </div>
 
             <div class="max-w-6xl mx-auto grid grid-cols-1 gap-6">
@@ -128,14 +131,16 @@
                         <!-- Action Panel -->
                         <div class="md:w-64 flex flex-col space-y-4">
                             <!-- Status Update -->
-                            <div>
-                                <label class="block text-sm font-medium text-[#0245a3] mb-1">Update Status</label>
-                                <select class="w-full bg-white border border-[#8fbaf3]/40 rounded-lg px-3 py-2 text-sm text-[#0245a3] focus:outline-none focus:ring-2 focus:ring-[#8fbaf3]">
-                                    <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Open</option>
-                                    <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                                    <option value="pending" {% if ticket.status == 'pending' %}selected{% endif %}>Pending</option>
-                                    <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Resolved</option>
-                                </select>
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm font-medium text-[#0245a3]">Curent Status</label>
+                                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold 
+                                           {% if ticket.status == 'open' %}bg-green-100 text-green-800
+                                           {% elif ticket.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                           {% elif ticket.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                           {% elif ticket.status == 'resolved' %}bg-gray-100 text-gray-800
+                                           {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ ticket.status|title }}
+                                </span>
                             </div>
 
                             <!-- Action Buttons -->
@@ -156,13 +161,41 @@
                                     <i class="fas fa-eye mr-2"></i> View Details
                                 </a>
                                 {% endif %}
-                                
-                                <form method="post" action="{% url 'resolve_ticket' ticket.id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="w-full inline-flex justify-center items-center bg-green-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-green-700 transition">
-                                        <i class="fas fa-check-circle mr-2"></i> Mark Resolved
+
+                                {% if ticket.status == 'open' or ticket.status == 'assigned' or ticket.status == 'pending' %}
+                                    <form method="post" action="{% url 'start_work_ticket' ticket.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full inline-flex justify-center items-center bg-blue-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-blue-700 transition">
+                                            <i class="fas fa-play mr-2"></i> Start Work
+                                        </button>
+                                    </form>
+                                {% elif ticket.status == 'in_progress' %}
+                                    <button type="button" class="w-full inline-flex justify-center items-center bg-blue-300 text-white font-semibold rounded-xl py-2 px-4 text-sm cursor-not-allowed" disabled>
+                                        <i class="fas fa-spinner mr-2"></i> Working
                                     </button>
-                                </form>
+                                {% endif %}
+
+                                {% if ticket.status == 'resolved' %}
+                                    {% if item.has_review %}
+                                    <button type="button" class="w-full inline-flex justify-center items-center bg-gray-300 text-gray-600 font-semibold rounded-xl py-2 px-4 text-sm cursor-not-allowed" disabled>
+                                        <i class="fas fa-ban mr-2"></i> Cannot Unresolve (Review Exists)
+                                    </button>
+                                    {% else %}
+                                    <form method="post" action="{% url 'resolve_ticket' ticket.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full inline-flex justify-center items-center bg-orange-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-orange-700 transition">
+                                            <i class="fas fa-undo mr-2"></i> Unresolve Ticket
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                {% else %}
+                                    <form method="post" action="{% url 'resolve_ticket' ticket.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full inline-flex justify-center items-center bg-green-600 text-white font-semibold rounded-xl py-2 px-4 text-sm hover:bg-green-700 transition">
+                                            <i class="fas fa-check-circle mr-2"></i> Mark Resolved
+                                        </button>
+                                    </form>
+                                {% endif %}
                                 
                             </div>
                         </div>

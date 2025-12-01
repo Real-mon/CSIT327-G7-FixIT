@@ -26,6 +26,7 @@
                         <div class="space-y-4">
                             <div class="space-y-3">
                                 <h3 class="font-semibold text-white">Popular guides</h3>
+                                <div class="space-y-3 overflow-y-auto" style="max-height: 240px;">
 
                                 <div class="bg-white/20 rounded-xl p-4 border border-white/20">
                                     <h4 class="font-semibold text-white mb-1">Computer Running Slow?</h4>
@@ -43,6 +44,25 @@
                                         <i class="fas fa-clock mr-1"></i>
                                         <span>10 min read</span>
                                     </div>
+                                </div>
+
+                                <div class="bg-white/20 rounded-xl p-4 border border-white/20">
+                                    <h4 class="font-semibold text-white mb-1">Password Reset Issues</h4>
+                                    <p class="text-white/70 text-sm mb-2">What to do when you can't reset your password</p>
+                                    <div class="flex items-center text-white/60 text-xs">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        <span>7 min read</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white/20 rounded-xl p-4 border border-white/20">
+                                    <h4 class="font-semibold text-white mb-1">Printer Not Working</h4>
+                                    <p class="text-white/70 text-sm mb-2">Basic checks to fix common printer problems</p>
+                                    <div class="flex items-center text-white/60 text-xs">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        <span>6 min read</span>
+                                    </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
@@ -62,7 +82,7 @@
                 <div class="lg:col-span-2 space-y-8">
                     <div class="grid grid-cols-3 gap-4">
                         <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6 text-center">
-                            <div class="text-2xl font-bold text-white mb-1">{{ total_tickets_created }}</div>
+                            <div class="text-2xl font-bold text-white mb-1">{{ open_tickets_count }}</div>
                             <div class="text-white/70 text-sm">Open Tickets</div>
                         </div>
                         <div class="bg-[#0245a3] backdrop-blur-lg rounded-2xl border border-white/20 p-6 text-center">
@@ -80,7 +100,7 @@
                             <h2 class="text-xl font-bold text-white">Recent Tickets</h2>
                             <a href="{% url 'my_tickets' %}" class="text-white/80 hover:text-white text-sm font-semibold">View all</a>
                         </div>
-                        <div class="space-y-4">
+                        <div class="space-y-4 overflow-y-auto" style="max-height: 360px;">
                             {% for ticket in recent_tickets %}
                             <div class="bg-white/20 rounded-xl p-4 border border-white/20">
                                 <div class="flex justify-between items-start mb-2">
@@ -88,7 +108,7 @@
                                     <div class="text-white/60 text-sm">{{ ticket.created_at|timesince }} ago</div>
                                 </div>
                                 <h4 class="font-semibold text-white mb-1">{{ ticket.title }}</h4>
-                                <p class="text-white/70 text-sm">Last update: {{ ticket.last_update|default:"No update available" }}</p>
+                                <p class="text-white/70 text-sm">Status: {{ ticket.status|title }}</p>
                             </div>
                             {% empty %}
                             <div class="p-4 text-white/70 text-center">
@@ -101,30 +121,17 @@
 
            <div class="mb-6">
                 <h2 class="text-2xl font-bold text-[#0245a3] mb-4">Notifications</h2>
-
-                {% for notification in notifications %}
-                    {% comment %}
-                        Set the Tailwind classes based on the notification style in one block.
-                        We define a variable called notification_classes.
-                    {% endcomment %}
-
-                    {% if notification.style == 'blue' %}
-                        {% with notification_classes="bg-blue-100 border-l-4 border-blue-500 text-blue-700" %}
-                        {% endwith %}
-                    {% elif notification.style == 'yellow' %}
-                        {% with notification_classes="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700" %}
-                        {% endwith %}
-                    {% else %}
-                        {% with notification_classes="bg-gray-100 border-l-4 border-gray-500 text-gray-700" %}
-                        {% endwith %}
-                    {% endif %}
-
-                    <div class="{{ notification_classes }} p-4 mb-3 rounded-lg shadow-md" role="alert">
-                        <p class="font-bold text-lg">{{ notification.type }}</p>
-                        <p class="text-base">{{ notification.message }}</p>
-                        <p class="text-sm text-gray-500 mt-1">Date: {{ notification.date_time }}</p>
+                <div class="space-y-3 overflow-y-auto" style="max-height: 240px;">
+                    {% for n in notifications %}
+                    <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-lg shadow-md" role="alert">
+                        <p class="font-bold text-lg">Notification</p>
+                        <p class="text-base">{{ n.message }}</p>
+                        <p class="text-sm text-gray-500 mt-1">{{ n.created_at|date:"Y-m-d H:i" }}</p>
                     </div>
-                {% endfor %}
+                    {% empty %}
+                    <div class="text-[#0245a3]">No notifications.</div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
