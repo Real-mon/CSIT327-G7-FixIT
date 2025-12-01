@@ -67,4 +67,5 @@ path('available-technicians/', views.available_technicians, name='available-tech
     #DELETE TICKET
 path('ticket/<int:ticket_id>/delete/', views.delete_ticket, name='delete_ticket'),
 
+
 ]

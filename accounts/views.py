@@ -2213,24 +2213,25 @@ def technician_dashboard_view(request):
     return render(request, 'dashboard/technician_dashboard.html', context)
 
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
+from .models import UserProfile, CreateTicket  # <-- Ensure CreateTicket is imported
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
 
 
-
-
-
-
-
-
-
-
-
-
-
+# Assuming CreateTicket, UserProfile are imported from .models
+# Assuming User is imported if needed, and timezone is imported.
 
 @login_required
 def user_dashboard_view(request):
     """
-    Display user dashboard
+    Display user dashboard and user-specific ticket data.
     """
     user = request.user
 
@@ -2248,10 +2249,59 @@ def user_dashboard_view(request):
         messages.info(request, 'Redirecting to technician dashboard.')
         return redirect('technician_dashboard')
 
+    # --- TICKET DATA ---
+
+    # Base Queryset for the user
+    user_tickets_queryset = CreateTicket.objects.filter(user=user)
+
+    # 1. Fetch Recent Tickets (Last 2)
+    recent_tickets = user_tickets_queryset.order_by('-created_at')[:2]
+
+    # 2. Calculate Quick Stats
+
+    # Define the start of the current month
+    now = timezone.now()
+    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # NEW CONTEXT: Total Tickets Created
+    total_tickets_created = user_tickets_queryset.count()
+
+    # Open Tickets (Assumes statuses like 'New', 'Assigned', 'In Progress' are considered open)
+    open_tickets_count = user_tickets_queryset.filter(
+        status__in=['New', 'Assigned', 'In Progress']
+    ).count()
+
+    # Resolved This Month (Assumes status 'Resolved' and a 'resolved_at' field)
+    resolved_this_month_count = user_tickets_queryset.filter(
+        status='Resolved',
+        # resolved_at__gte=start_of_month # Uncomment if you have a resolved_at field
+    ).count()
+
+    # Avg. Response Time (Placeholder - complex calculation)
+    avg_response_time_display = "2.5h"
+
+    # 3. Static Notification Data (Matching your template's hardcoded values)
+    notifications = [
+        {'type': 'Quick Reminder', 'message': 'Please verify your account details by the end of the week.',
+         'date_time': '2025-11-19 12:00 PM', 'style': 'blue'},
+        {'type': 'Maintenance Notice', 'message': 'Minor service maintenance is scheduled for Thursday.',
+         'date_time': '2025-11-20 08:00 AM', 'style': 'yellow'},
+    ]
+
     context = {
         'user': user,
         'profile': profile,
-        'title': 'User Dashboard - FixIT'
+        'title': 'User Dashboard - FixIT',
+
+        # New Context for Tickets and Stats
+        'recent_tickets': recent_tickets,
+        'open_tickets_count': open_tickets_count,
+        'resolved_this_month_count': resolved_this_month_count,
+        'avg_response_time_display': avg_response_time_display,
+        'notifications': notifications,
+
+        # ADDED VARIABLE
+        'total_tickets_created': total_tickets_created,
     }
     return render(request, 'dashboard/user_dashboard.html', context)
 
@@ -3039,3 +3089,57 @@ def submit_ticket_review(request, ticket_id):
 
     messages.success(request, 'Thank you for your feedback!')
     return redirect('my_tickets')
+
+
+# views.py (Technician side)
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from django.db import transaction  # Import transaction for safety
+
+
+def accept_request_view(request, request_id):
+    # Ensure the user is authenticated and has a technician profile
+    if not request.user.is_authenticated or not hasattr(request.user,
+                                                        'profile') or not request.user.profile.is_technician:
+        messages.error(request, "Access denied. You must be an authorized technician.")
+        return redirect('home')
+
+    assistance_request = get_object_or_404(AssistanceRequest, id=request_id)
+
+    # Access the Django User object attached to the Technician profile
+    technician_user = assistance_request.technician.user
+
+    # 1. Security Check: Ensure the logged-in user is the technician named in the request
+    if technician_user != request.user:
+        messages.error(request, "You are not authorized to accept this request.")
+        return redirect('technician_dashboard')
+
+    # 2. Status Check: Ensure the ticket's underlying status is compatible
+    if assistance_request.status == 'pending':
+
+        # Use a database transaction to ensure both updates happen successfully, or neither does.
+        with transaction.atomic():
+
+            # a. Update the AssistanceRequest status
+            assistance_request.status = 'accepted'
+            assistance_request.save()
+
+            # b. Update the main CreateTicket
+            ticket = assistance_request.ticket
+
+            # CRITICAL CHANGE: Assign the Django User object
+            ticket.technician = technician_user
+            ticket.status = 'assigned'
+            ticket.save()
+
+            # c. OPTIONAL: Reject any other pending requests for this same ticket
+            AssistanceRequest.objects.filter(
+                ticket=ticket,
+                status='pending'
+            ).exclude(id=request_id).update(status='rejected')
+
+        messages.success(request, f"Ticket #{ticket.id} has been successfully assigned to you.")
+    else:
+        messages.error(request, "This request has already been handled or is invalid.")
+
+    return redirect('technician_dashboard')
