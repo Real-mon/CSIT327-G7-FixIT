@@ -393,6 +393,11 @@ class Message(models.Model):
         blank=True
     )
     content = models.TextField()
+    bot_response_data = models.JSONField(
+        null=True, 
+        blank=True,
+        help_text="Structured data for bot responses (buttons, related FAQs, etc.)"
+    )
     message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -419,6 +424,36 @@ class Message(models.Model):
         sender_name = self.sender.username if self.sender else 'System'
         receiver_name = self.receiver.username if self.receiver else 'Unknown'
         return f"{sender_name} to {receiver_name}: {self.content[:50]}"
+    def __str__(self):
+        sender_name = self.sender.username if self.sender else 'System'
+        receiver_name = self.receiver.username if self.receiver else 'Unknown'
+        return f"{sender_name} to {receiver_name}: {self.content[:50]}"
+    
+    @property
+    def has_bot_data(self):
+        """Check if message has bot response data"""
+        return bool(self.bot_response_data) and self.message_type == 'bot_to_user'
+    
+    @property
+    def bot_buttons(self):
+        """Get bot buttons from response data"""
+        if self.has_bot_data:
+            return self.bot_response_data.get('buttons', [])
+        return []
+    
+    @property
+    def related_faqs(self):
+        """Get related FAQs from response data"""
+        if self.has_bot_data:
+            return self.bot_response_data.get('related_faqs', [])
+        return []
+    
+    @property
+    def response_type(self):
+        """Get response type"""
+        if self.has_bot_data:
+            return self.bot_response_data.get('type', 'default')
+        return 'default'
 
     def soft_delete(self, user):
         """Soft delete the message"""
@@ -561,3 +596,56 @@ def create_chat_session_on_assistance_request(sender, instance, created, **kwarg
                 content=f"Assistance request created for ticket: {instance.ticket.title}",
                 message_type='user_to_tech'
             )
+
+
+
+# models.py - Enhanced FAQ models
+class FAQCategory(models.Model):
+    """Categories for organizing FAQ items"""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True)
+    order = models.IntegerField(default=0)
+    icon = models.CharField(max_length=50, default='fa-question-circle')
+    
+    class Meta:
+        verbose_name_plural = "FAQ Categories"
+        ordering = ['order', 'name']
+    
+    def __str__(self):
+        return self.name
+
+
+class FAQItem(models.Model):
+    """FAQ items that can be used in both help center and bot responses"""
+    category = models.ForeignKey(FAQCategory, on_delete=models.CASCADE, related_name='faqs')
+    question = models.CharField(max_length=255)
+    short_question = models.CharField(max_length=100, help_text="Short version for bot buttons")
+    answer = models.TextField()
+    short_answer = models.TextField(help_text="Brief answer for quick responses")
+    read_time = models.CharField(max_length=20, default="5 min read")
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    keywords = models.TextField(help_text="Comma-separated keywords for bot matching", blank=True)
+    bot_priority = models.IntegerField(default=0, help_text="Priority in bot responses (higher = more likely)")
+    show_in_dashboard = models.BooleanField(default=True, help_text="Show in dashboard troubleshooting")
+    show_in_bot_buttons = models.BooleanField(default=True, help_text="Show as quick buttons in bot chat")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'question']
+    
+    def __str__(self):
+        return self.question
+    
+    def get_keywords_list(self):
+        """Get list of keywords for bot matching"""
+        if self.keywords:
+            return [k.strip().lower() for k in self.keywords.split(',')]
+        return []
+    
+    def get_short_description(self):
+        """Extract a short description for dashboard cards"""
+        return self.short_answer or self.answer[:100] + '...' if len(self.answer) > 100 else self.answer

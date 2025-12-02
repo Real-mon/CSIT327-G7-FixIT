@@ -1,7 +1,8 @@
 import os
 from django.contrib.auth.forms import PasswordChangeForm
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.db import models 
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -12,10 +13,8 @@ from .forms import UserSignUpForm, UserLoginForm, UserUpdateForm, ProfileUpdateF
 from django.contrib.auth import update_session_auth_hash
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
-from django.shortcuts import render
 
 from .models import Ticket, UserSettings
-from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q, Avg, Count
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
@@ -27,6 +26,7 @@ from .models import Technician, TechnicianSpecialty, AssistanceRequest
 from .models import User, UserProfile, Message, Contact, CreateTicket, ChatSession, Notification, Notifications_Technician, MessageEditHistory, TechnicianReview
 from django.db.models.signals import post_save
 from django.utils import timezone
+from accounts.models import FAQCategory, FAQItem
 
 
 def role_select_view(request):
@@ -42,23 +42,6 @@ def role_select_view(request):
         'hide_navigation': True
     }
     return render(request, 'accounts/role_select.html', context)
-
-
-from accounts.forms import UserSignUpForm
-from accounts.models import UserProfile
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth import login
-from .forms import UserSignUpForm
-from .models import UserProfile
-
-from django.contrib.auth import login
-from django.contrib import messages
-from django.shortcuts import render, redirect
-from .forms import UserSignUpForm
-from .models import UserProfile  # make sure this is imported
-
 
 def signup_view(request):
     """
@@ -102,11 +85,6 @@ def signup_view(request):
     }
     return render(request, 'accounts/signup.html', context)
 
-
-
-
-from django.contrib.auth import authenticate, login
-from django.contrib import messages
 
 
 def login_view(request):
@@ -162,6 +140,7 @@ def dashboard_view(request):
     Display user dashboard with account details - redirects to appropriate dashboard
     """
     return redirect_to_correct_dashboard(request.user)
+
 
 @login_required
 def technician_directory_view(request):
@@ -254,6 +233,8 @@ def technician_directory_view(request):
     }
 
     return render(request, 'dashboard/technician_directory.html', context)
+
+
 
 import json
 from django.http import JsonResponse
@@ -444,6 +425,7 @@ def request_assistance_view(request):
             'error': f'Server error: {str(e)}'
         }, status=500)
 
+
 @csrf_exempt
 @login_required
 def assign_ticket_to_technician(request):
@@ -573,155 +555,7 @@ def create_chat_session_on_assistance_request(sender, instance, created, **kwarg
             import traceback
             print(f"🔧 CHAT SIGNAL: Traceback: {traceback.format_exc()}")
             
-@login_required
-def debug_fix_chats(request):
-    """
-    Debug endpoint to manually create missing chat sessions
-    """
-    if not request.user.profile.is_technician:
-        return JsonResponse({'error': 'Not a technician'})
-    
-    user = request.user
-    print(f"🔧 DEBUG FIX: Starting chat fix for technician {user.username}")
-    
-    # Get all assigned tickets
-    assigned_tickets = CreateTicket.objects.filter(
-        assistance_requests__technician__user_profile__user=user
-    ).distinct()
-    
-    print(f"🔧 DEBUG FIX: Found {assigned_tickets.count()} assigned tickets")
-    
-    created_count = 0
-    ticket_details = []
-    
-    for ticket in assigned_tickets:
-        print(f"🔧 DEBUG FIX: Processing ticket {ticket.id}: {ticket.title}")
-        
-        # Check if chat session already exists
-        existing_chat = ChatSession.objects.filter(
-            technician=user,
-            ticket=ticket
-        ).first()
-        
-        if existing_chat:
-            print(f"🔧 DEBUG FIX: Chat already exists for ticket {ticket.id} - Chat ID: {existing_chat.id}")
-            ticket_details.append({
-                'ticket_id': ticket.id,
-                'ticket_title': ticket.title,
-                'chat_exists': True,
-                'chat_id': existing_chat.id
-            })
-        else:
-            # Create new chat session
-            try:
-                chat_session = ChatSession.objects.create(
-                    user=ticket.user,
-                    technician=user,
-                    ticket=ticket,
-                    chat_type='user_tech',
-                    status='active',
-                    last_message_at=timezone.now()
-                )
-                
-                # Create initial message
-                initial_content = f"Support ticket created: {ticket.title}\n\nDescription: {ticket.description}\nCategory: {ticket.category}\nPriority: {ticket.priority}"
-                
-                Message.objects.create(
-                    chat_session=chat_session,
-                    sender=ticket.user,
-                    receiver=user,
-                    content=initial_content,
-                    message_type='user_to_tech',
-                    created_at=timezone.now()
-                )
-                
-                created_count += 1
-                print(f"🔧 DEBUG FIX: Created chat session {chat_session.id} for ticket {ticket.id}")
-                
-                ticket_details.append({
-                    'ticket_id': ticket.id,
-                    'ticket_title': ticket.title,
-                    'chat_exists': False,
-                    'chat_created': True,
-                    'chat_id': chat_session.id
-                })
-                
-            except Exception as e:
-                print(f"❌ DEBUG FIX: Error creating chat for ticket {ticket.id}: {e}")
-                ticket_details.append({
-                    'ticket_id': ticket.id,
-                    'ticket_title': ticket.title,
-                    'error': str(e)
-                })
-    
-    print(f"🔧 DEBUG FIX: Created {created_count} new chat sessions")
-    
-    return JsonResponse({
-        'success': True,
-        'created_count': created_count,
-        'total_tickets': assigned_tickets.count(),
-        'ticket_details': ticket_details,
-        'message': f'Created {created_count} missing chat sessions out of {assigned_tickets.count()} assigned tickets'
-    })
-@login_required
-def debug_technician_data(request):
-    """
-    Comprehensive debug view for technician data
-    """
-    user = request.user
-    
-    data = {
-        'technician': {
-            'username': user.username,
-            'is_technician': user.profile.is_technician,
-        },
-        'assistance_requests': [],
-        'tickets': [],
-        'chat_sessions': []
-    }
-    
-    # Get assistance requests
-    assistance_requests = AssistanceRequest.objects.filter(
-        technician__user_profile__user=user
-    ).select_related('ticket', 'user')
-    
-    for ar in assistance_requests:
-        data['assistance_requests'].append({
-            'id': ar.id,
-            'title': ar.title,
-            'status': ar.status,
-            'ticket_id': ar.ticket.id if ar.ticket else None,
-            'ticket_title': ar.ticket.title if ar.ticket else None,
-            'user': ar.user.username,
-        })
-    
-    # Get tickets
-    tickets = CreateTicket.objects.filter(
-        assistance_requests__technician__user_profile__user=user
-    ).distinct()
-    
-    for ticket in tickets:
-        data['tickets'].append({
-            'id': ticket.id,
-            'title': ticket.title,
-            'status': ticket.status,
-            'user': ticket.user.username,
-        })
-    
-    # Get chat sessions
-    chat_sessions = ChatSession.objects.filter(technician=user)
-    
-    for chat in chat_sessions:
-        data['chat_sessions'].append({
-            'id': chat.id,
-            'user': chat.user.username,
-            'ticket_id': chat.ticket.id if chat.ticket else None,
-            'ticket_title': chat.ticket.title if chat.ticket else None,
-            'chat_type': chat.chat_type,
-            'status': chat.status,
-        })
-    
-    return JsonResponse(data)
+
    
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -762,7 +596,7 @@ def handle_message_post_request(request, user):
         return JsonResponse({'success': False, 'error': 'Invalid action'})
 
 def handle_send_message(request, user):
-    """Handle sending a new message"""
+    """Handle sending a new message with enhanced bot responses"""
     try:
         chat_session_id = request.POST.get('chat_session_id')
         content = request.POST.get('content', '').strip()
@@ -776,69 +610,65 @@ def handle_send_message(request, user):
         # Get chat session
         chat_session = ChatSession.objects.get(
             id=chat_session_id,
-            user=user  # Ensure user owns this chat session
+            user=user
         )
         
-        # Determine message type and receiver
-        if chat_session.chat_type == 'user_bot':
-            message_type = 'user_to_bot'
-            receiver = None
-            
-            # Create user message
-            message = Message.objects.create(
-                chat_session=chat_session,
-                sender=user,
-                receiver=receiver,
-                content=content,
-                message_type=message_type
-            )
-            
-            # Generate bot response
-            bot_response = generate_bot_response(content)
-            bot_message = Message.objects.create(
-                chat_session=chat_session,
-                content=bot_response,
-                message_type='bot_to_user'
-            )
-            
-            # Update chat session
-            chat_session.last_message_at = timezone.now()
-            chat_session.save()
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Message sent successfully'
-            })
-        else:
-            message_type = 'user_to_tech'
-            receiver = chat_session.technician
-            
-            # Create message
-            message = Message.objects.create(
-                chat_session=chat_session,
-                sender=user,
-                receiver=receiver,
-                content=content,
-                message_type=message_type
-            )
-            
-            # Update chat session
-            chat_session.last_message_at = timezone.now()
-            chat_session.save()
-            
-            # Create notification for technician
-            create_message_notification(chat_session.technician, user, message)
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Message sent successfully'
-            })
+        # Create user message
+        user_message = Message.objects.create(
+            chat_session=chat_session,
+            sender=user,
+            content=content,
+            message_type='user_to_bot'
+        )
+        
+        # Generate enhanced bot response
+        bot_response = generate_bot_response(content)
+        
+        print(f"🔧 DEBUG: Bot response generated - Type: {bot_response.get('type')}")
+        print(f"🔧 DEBUG: Bot buttons count: {len(bot_response.get('buttons', []))}")
+        
+        # Prepare bot response data
+        bot_data = {
+            'type': bot_response.get('type', 'default'),
+            'buttons': bot_response.get('buttons', []),
+            'related_faqs': bot_response.get('related_faqs', []),
+            'faq_id': bot_response.get('faq_id'),
+            'category': bot_response.get('category')
+        }
+        
+        # Create bot message with structured data
+        bot_message = Message.objects.create(
+            chat_session=chat_session,
+            content=bot_response.get('message', ''),
+            message_type='bot_to_user',
+            bot_response_data=bot_data  # Store structured data in JSON field
+        )
+        
+        # Update chat session
+        chat_session.last_message_at = timezone.now()
+        chat_session.save()
+        
+        # Return structured response including buttons
+        return JsonResponse({
+            'success': True,
+            'bot_response': {
+                'message': bot_response.get('message', ''),
+                'type': bot_response.get('type', 'default'),
+                'buttons': bot_response.get('buttons', []),
+                'related_faqs': bot_response.get('related_faqs', []),
+                'faq_id': bot_response.get('faq_id'),
+                'category': bot_response.get('category')
+            }
+        })
         
     except ChatSession.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Chat session not found'})
     except Exception as e:
+        print(f"❌ ERROR in handle_send_message: {e}")
+        import traceback
+        print(f"🔍 Traceback: {traceback.format_exc()}")
         return JsonResponse({'success': False, 'error': str(e)})
-
+    
 def handle_edit_message(request, user):
     """Handle editing an existing message"""
     try:
@@ -1019,51 +849,10 @@ def render_user_messages_with_tickets(request, user):
     # Get user's tickets
     user_tickets = CreateTicket.objects.filter(user=user).order_by('-created_at')
     
-    print(f"🔧 DEBUG: Found {user_tickets.count()} user tickets")
-    
-    # AUTO-FIX: Create missing chat sessions for user tickets
-    if user_tickets.exists():
-        created_count = 0
-        for ticket in user_tickets:
-            # Check if chat session exists (user-bot or user-tech)
-            existing_chat = ChatSession.objects.filter(
-                user=user,
-                ticket=ticket
-            ).exists()
-            
-            if not existing_chat:
-                try:
-                    # Create a bot chat session for the ticket
-                    chat_session = ChatSession.objects.create(
-                        user=user,
-                        ticket=ticket,
-                        chat_type='user_bot',  # Start with bot chat
-                        status='active',
-                        last_message_at=timezone.now()
-                    )
-                    
-                    # Create initial message
-                    Message.objects.create(
-                        chat_session=chat_session,
-                        content=f"Hello! I see you have a ticket about: {ticket.title}. How can I help you with this issue?",
-                        message_type='bot_to_user'
-                    )
-                    
-                    created_count += 1
-                    print(f"🔧 USER AUTO-FIX: Created bot chat for ticket {ticket.id}")
-                    
-                except Exception as e:
-                    print(f"❌ USER AUTO-FIX: Error creating chat for ticket {ticket.id}: {e}")
-        
-        if created_count > 0:
-            print(f"🔧 USER AUTO-FIX: Created {created_count} missing chat sessions")
-    
     # Get user's chat sessions
     chat_sessions = ChatSession.objects.filter(
         Q(user=user) | Q(technician=user)
     ).select_related('user', 'technician', 'ticket').prefetch_related('messages').distinct()
-    
-    print(f"🔧 DEBUG: Found {chat_sessions.count()} chat sessions for user")
     
     # Prepare chat data for template
     user_chats = []
@@ -1084,17 +873,10 @@ def render_user_messages_with_tickets(request, user):
                 'status': chat.ticket.status if chat.ticket else 'open'
             }
         
-        # Get unread message count
-        unread_count = chat.messages.filter(
-            receiver=user,
-            is_read=False
-        ).count()
-        
         user_chats.append({
             'id': chat.id,
             'contact_name': contact_name,
             'is_bot': is_bot,
-            'unread_count': unread_count,
             'last_message_at': chat.last_message_at,
             'chat_type': chat.chat_type,
             'ticket': ticket_info,
@@ -1143,8 +925,16 @@ def render_user_messages_with_tickets(request, user):
                 is_read=False
             ).update(is_read=True)
             
-            # Get messages
+            # Get messages - IMPORTANT: Prefetch related data if needed
             chat_messages = selected_chat_obj.messages.filter(is_deleted=False).order_by('created_at')
+            
+            # Debug: Check bot messages
+            bot_messages = chat_messages.filter(message_type='bot_to_user')
+            print(f"🔧 DEBUG: Found {bot_messages.count()} bot messages")
+            for msg in bot_messages:
+                print(f"🔧 DEBUG: Bot message {msg.id} has bot_data: {bool(msg.bot_response_data)}")
+                if msg.bot_response_data:
+                    print(f"🔧 DEBUG: Buttons: {len(msg.bot_response_data.get('buttons', []))}")
             
         except ChatSession.DoesNotExist:
             selected_chat = None
@@ -1153,6 +943,29 @@ def render_user_messages_with_tickets(request, user):
     technicians = Technician.objects.select_related(
         'user_profile__user'
     ).filter(is_available=True)
+    
+    try:
+        # Import your FAQ models
+        from .models import FAQCategory, FAQItem
+        
+        # Get FAQ categories with their top FAQs for bot buttons
+        faq_categories = FAQCategory.objects.prefetch_related(
+            models.Prefetch(
+                'faqs',
+                queryset=FAQItem.objects.filter(
+                    is_active=True,
+                    show_in_bot_buttons=True
+                ).order_by('-bot_priority')[:3]
+            )
+        ).order_by('order')
+        
+        # Add top_faqs attribute to each category
+        for category in faq_categories:
+            category.top_faqs = list(category.faqs.all())
+            
+    except Exception as e:
+        print(f"⚠️ FAQ data not available: {e}")
+        faq_categories = []  # Empty list as fallback
     
     context = {
         'user': user,
@@ -1163,6 +976,7 @@ def render_user_messages_with_tickets(request, user):
         'selected_chat': selected_chat,
         'chat_messages': chat_messages,
         'technicians': technicians,
+        'faq_categories': faq_categories,
     }
     
     return render(request, 'dashboard/user_message.html', context)
@@ -2129,99 +1943,7 @@ def test_direct_supabase_connection(request):
             'error_type': type(e).__name__
         })
 
-@login_required
-def debug_upload_flow(request):
-    """Debug the complete upload flow"""
-    from django.core.files.storage import default_storage
-    from django.core.files.base import ContentFile
-    from django.http import JsonResponse
-    import os
 
-    debug_info = {
-        'storage_backend': str(default_storage.__class__),
-        'storage_module': default_storage.__class__.__module__,
-    }
-
-    # Test 1: Check storage backend attributes
-    try:
-        debug_info['bucket_name'] = getattr(default_storage, 'bucket_name', 'Not found')
-        debug_info['endpoint_url'] = getattr(default_storage, 'endpoint_url', 'Not found')
-        debug_info['access_key'] = getattr(default_storage, 'access_key', 'Not found')
-        debug_info['secret_key_set'] = bool(getattr(default_storage, 'secret_key', None))
-    except Exception as e:
-        debug_info['attribute_error'] = str(e)
-
-    # Test 2: Perform actual file operation and see where it goes
-    try:
-        test_filename = f"debug_upload_test_{request.user.id}.txt"
-        test_content = b"This is a test upload to see where files go"
-
-        print(f"🧪 DEBUG: Attempting to save {test_filename}")
-
-        # Save file
-        saved_path = default_storage.save(test_filename, ContentFile(test_content))
-        debug_info['saved_path'] = saved_path
-        print(f"✅ DEBUG: File saved as: {saved_path}")
-
-        # Check if it's a local filesystem path
-        if hasattr(default_storage, 'location'):
-            storage_location = default_storage.location
-            debug_info['storage_location'] = storage_location
-
-            # Check if file exists locally
-            local_path = os.path.join(storage_location, saved_path) if storage_location else saved_path
-            debug_info['local_path'] = local_path
-            debug_info['local_exists'] = os.path.exists(local_path)
-            print(f"🔍 DEBUG: Local path: {local_path}, Exists: {debug_info['local_exists']}")
-
-        # Check if file exists in storage
-        debug_info['storage_exists'] = default_storage.exists(saved_path)
-        print(f"🔍 DEBUG: Storage exists: {debug_info['storage_exists']}")
-
-        # Try to get URL
-        try:
-            url = default_storage.url(saved_path)
-            debug_info['generated_url'] = url
-            print(f"🌐 DEBUG: Generated URL: {url}")
-        except Exception as e:
-            debug_info['url_error'] = str(e)
-            print(f"❌ DEBUG: URL error: {e}")
-
-        # Clean up
-        try:
-            default_storage.delete(saved_path)
-            debug_info['cleanup_success'] = True
-        except Exception as e:
-            debug_info['cleanup_error'] = str(e)
-
-    except Exception as e:
-        debug_info['upload_test_error'] = str(e)
-        print(f"❌ DEBUG: Upload test failed: {e}")
-
-    return JsonResponse(debug_info)
-
-@login_required
-def check_current_storage(request):
-    """Check which storage backend is actually being used"""
-    from django.conf import settings
-    from django.core.files.storage import default_storage
-    from django.http import JsonResponse
-
-    config = {
-        'DEFAULT_FILE_STORAGE': getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set'),
-        'actual_storage_class': str(default_storage.__class__),
-        'STORAGES_default': getattr(settings, 'STORAGES', {}).get('default', {}).get('BACKEND', 'Not set'),
-    }
-
-    # Check if we're using local storage instead of S3
-    if 'FileSystemStorage' in str(default_storage.__class__):
-        config['storage_type'] = 'LOCAL_FILESYSTEM'
-        if hasattr(default_storage, 'location'):
-            config['local_media_root'] = default_storage.location
-    else:
-        config['storage_type'] = 'REMOTE_STORAGE'
-
-    return JsonResponse(config)
 
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -2298,7 +2020,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
-from .models import UserProfile, CreateTicket  # <-- Ensure CreateTicket is imported
+from .models import UserProfile, CreateTicket  
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
@@ -2306,13 +2028,10 @@ from django.contrib import messages
 from django.utils import timezone
 
 
-# Assuming CreateTicket, UserProfile are imported from .models
-# Assuming User is imported if needed, and timezone is imported.
-
 @login_required
 def user_dashboard_view(request):
     """
-    Display user dashboard and user-specific ticket data.
+    Display user dashboard with dynamic troubleshooting guides from FAQ
     """
     user = request.user
 
@@ -2330,60 +2049,72 @@ def user_dashboard_view(request):
         messages.info(request, 'Redirecting to technician dashboard.')
         return redirect('technician_dashboard')
 
-    # --- TICKET DATA ---
-
-    # Base Queryset for the user
+    # --- TICKET DATA (existing code) ---
     user_tickets_queryset = CreateTicket.objects.filter(user=user)
-
-    # 1. Fetch Recent Tickets (Last 2)
     recent_tickets = user_tickets_queryset.order_by('-created_at')[:5]
-
-    # 2. Calculate Quick Stats
-
-    # Define the start of the current month
+    
     now = timezone.now()
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-    # NEW CONTEXT: Total Tickets Created
+    
     total_tickets_created = user_tickets_queryset.count()
-
-    # Open Tickets
     open_tickets_count = user_tickets_queryset.filter(
         status__in=['open', 'in_progress']
     ).count()
-
-    # Resolved This Month (based on created_at month/year)
+    
     resolved_this_month_count = user_tickets_queryset.filter(
         status='resolved',
         created_at__gte=start_of_month
     ).count()
-
-    # Avg. Response Time derived from user's assistance requests
+    
     ars = AssistanceRequest.objects.filter(user=user).select_related('technician')
     response_times = [ar.technician.average_response_time for ar in ars if ar.technician and ar.technician.average_response_time is not None]
     avg_response_time = round(sum(response_times) / len(response_times), 1) if response_times else None
     avg_response_time_display = f"{avg_response_time}h" if avg_response_time is not None else "—"
-
-    # 3. Latest notifications for the user
+    
     notifications = Notification.objects.filter(recipient=user).order_by('-created_at')[:5]
-
+    
+    # --- DYNAMIC TROUBLESHOOTING GUIDES FROM FAQ ---
+    try:
+        from .models import FAQItem
+        troubleshooting_guides = FAQItem.objects.filter(
+            is_active=True,
+            show_in_dashboard=True
+        ).select_related('category').order_by('-bot_priority', 'order')[:9]  # Show 9 for 3x3 grid
+    
+        # Prepare guide data for template
+        guide_data = []
+        for guide in troubleshooting_guides:
+            guide_data.append({
+                'id': guide.id,
+                'title': guide.short_question,
+                'description': guide.short_answer[:100] + '...' if len(guide.short_answer) > 100 else guide.short_answer,
+                'read_time': guide.read_time,
+                'category': guide.category.name if guide.category else 'General',
+                'category_icon': guide.category.icon if guide.category else 'question-circle',
+                'faq_url': f"{reverse('help_center')}#{guide.category.slug if guide.category else 'general'}"
+            })
+    except Exception as e:
+        print(f"⚠️ Dashboard FAQ error: {e}")
+        guide_data = []
+    
     context = {
         'user': user,
         'profile': profile,
         'title': 'User Dashboard - FixIT',
-
-        # New Context for Tickets and Stats
+        
+        # Ticket data
         'recent_tickets': recent_tickets,
         'open_tickets_count': open_tickets_count,
         'resolved_this_month_count': resolved_this_month_count,
         'avg_response_time_display': avg_response_time_display,
         'notifications': notifications,
-
-        # ADDED VARIABLE
         'total_tickets_created': total_tickets_created,
+        
+        # Dynamic troubleshooting guides
+        'troubleshooting_guides': guide_data,
     }
+    
     return render(request, 'dashboard/user_dashboard.html', context)
-
 #@login_required
 def password_reset_view(request):
     if request.method == "POST":
@@ -2772,31 +2503,7 @@ def delete_account_view(request):
 
 
 
-@csrf_exempt
-@login_required
-def debug_request_assistance(request):
-    """Debug endpoint to see what's being received"""
-    print("=== DEBUG REQUEST ASSISTANCE ===")
-    print(f"Method: {request.method}")
-    print(f"Content-Type: {request.content_type}")
-    print(f"Body: {request.body}")
-    print(f"User: {request.user}")
-    print(f"POST data: {request.POST}")
 
-    if request.body:
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            print(f"JSON data: {data}")
-        except Exception as e:
-            print(f"JSON decode error: {e}")
-
-    return JsonResponse({
-        'success': True,
-        'debug': 'Check server logs',
-        'method': request.method,
-        'content_type': request.content_type,
-        'user': request.user.username
-    })
 #/////////
 
 def create_contact_from_assistance(user, technician):
@@ -2830,67 +2537,335 @@ def start_bot_chat(request):
     return redirect(f'/user/messages/?chat={chat_session.id}')
 
 
+# In views.py, update help_center_view
+@login_required
+def help_center_view(request):
+    """
+    Dynamic help center page using database FAQ data
+    """
+    try:
+        # Get all categories with their FAQs
+        categories = FAQCategory.objects.prefetch_related('faqs').order_by('order')
+        
+        context = {
+            'title': 'Help Center - FixIT',
+            'categories': categories,
+        }
+        
+    except Exception as e:
+        print(f"⚠️ Help center error: {e}")
+        # Return empty categories for fallback
+        context = {
+            'title': 'Help Center - FixIT',
+            'categories': [],
+        }
+    
+    return render(request, 'accounts/FAQ_Page.html', context)
+
+@login_required
+def get_faq_detail(request, faq_id):
+    """
+    API endpoint to get FAQ details for bot chat
+    """
+    try:
+        from .models import FAQItem
+        faq = FAQItem.objects.get(id=faq_id, is_active=True)
+        
+        return JsonResponse({
+            'success': True,
+            'faq': {
+                'id': faq.id,
+                'question': faq.question,
+                'short_question': faq.short_question,
+                'answer': faq.answer,
+                'category': faq.category.name,
+                'read_time': faq.read_time,
+            }
+        })
+    except FAQItem.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'FAQ not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def get_category_faqs(request, category_slug):
+    """
+    API endpoint to get FAQs by category
+    """
+    try:
+        from .models import FAQCategory, FAQItem
+        category = FAQCategory.objects.get(slug=category_slug)
+        faqs = FAQItem.objects.filter(
+            category=category, 
+            is_active=True
+        ).order_by('order')
+        
+        faq_list = []
+        for faq in faqs:
+            faq_list.append({
+                'id': faq.id,
+                'short_question': faq.short_question,
+                'question': faq.question,
+                'short_answer': faq.short_answer if hasattr(faq, 'short_answer') else faq.answer[:100] + '...',
+                'read_time': faq.read_time,
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'category': category.name,
+            'faqs': faq_list
+        })
+    except FAQCategory.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Category not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
 
 def generate_bot_response(message):
     """
-    Generate automated responses for the bot chat
+    Generate automated responses using FAQ database
     """
-    message_lower = message.lower()
-
-    responses = {
-        # Network Issues
-        'internet not showing in network options': "🌐 **Internet Not Showing in Network Options**\n\n**Troubleshooting Steps:**\n\n1. **Check Physical Connections**\n   • Ensure Ethernet cable is securely connected\n   • Restart your router/modem\n   • Check if other devices can connect\n\n2. **Network Adapter Issues**\n   • Go to Device Manager → Network Adapters\n   • Right-click your adapter → 'Update driver'\n   • Or try 'Disable' then 'Enable' the adapter\n\n3. **Network Reset**\n   • Windows: Settings → Network & Internet → Network Reset\n   • This will reinstall network adapters\n\n4. **Quick Fixes**\n   • Run Windows Network Diagnostics\n   • Command Prompt: `ipconfig /release` then `ipconfig /renew`\n   • Temporarily disable VPN/antivirus\n\nIf none work, you may need to contact your ISP or create a support ticket for further assistance.",
-
-        'wifi keeps disconnecting': "📶 **WiFi Connection Drops**\n\n**Common Solutions:**\n\n1. **Router Position**\n   • Move closer to the router\n   • Avoid physical obstructions\n   • Keep away from microwave ovens/cordless phones\n\n2. **Router Settings**\n   • Restart your router\n   • Update router firmware\n   • Change WiFi channel (1, 6, or 11)\n\n3. **Device Settings**\n   • Update wireless adapter drivers\n   • Disable 'Allow computer to turn off this device to save power'\n   • Forget network and reconnect\n\n4. **Advanced Fixes**\n   • Change WiFi band (2.4GHz vs 5GHz)\n   • Check for interference from other networks\n   • Consider WiFi extender if signal is weak",
-
-        'slow internet speed': "🐢 **Slow Internet Speed**\n\n**Speed Improvement Steps:**\n\n1. **Immediate Actions**\n   • Restart router and modem\n   • Close bandwidth-heavy applications\n   • Run speed test (speedtest.net)\n\n2. **Device Optimization**\n   • Clear browser cache and cookies\n   • Update network drivers\n   • Scan for malware/viruses\n\n3. **Network Management**\n   • Limit devices connected to WiFi\n   • Use Ethernet cable for critical devices\n   • Check for background updates\n\n4. **Contact ISP**\n   • Verify your internet plan speed\n   • Check for outages in your area\n   • Request line quality check",
-
-        # Device Problems
-        'computer running very slow': "🖥️ **Slow Computer Performance**\n\n**Performance Boost Steps:**\n\n1. **Quick Cleanup**\n   • Restart your computer\n   • Close unused applications\n   • Clear temporary files\n\n2. **Startup Management**\n   • Task Manager → Startup tab\n   • Disable unnecessary startup programs\n   • This speeds up boot time\n\n3. **Storage Optimization**\n   • Ensure 15%+ free space on C: drive\n   • Run Disk Cleanup utility\n   • Uninstall unused programs\n\n4. **System Maintenance**\n   • Run antivirus scan\n   • Update Windows and drivers\n   • Consider adding more RAM if consistently slow",
-
-        'printer not working': "🖨️ **Printer Troubleshooting**\n\n**Fix Printing Issues:**\n\n1. **Basic Checks**\n   • Ensure printer is powered on\n   • Check paper and ink levels\n   • Verify cables are connected\n\n2. **Connection Issues**\n   • Restart printer and computer\n   • Reinstall printer drivers\n   • Set as default printer\n\n3. **Software Solutions**\n   • Run Printer Troubleshooter\n   • Clear print queue\n   • Check printer status in Devices\n\n4. **Network Printing**\n   • For network printers, verify IP address\n   • Check if other computers can print\n   • Re-add network printer if needed",
-
-        # Add more responses for other common issues...
-    }
-
-    # Check for exact matches first
-    for keyword, response in responses.items():
-        if keyword in message_lower:
-            return response
-
-    # Check for partial matches
-    partial_responses = {
-        'internet': "🌐 **Internet Connection Issues**\n\nI can help with various internet problems:\n• No internet connection\n• WiFi dropping\n• Slow speeds\n• Network not showing\n\nPlease describe your specific issue, or use the 'Common Issues' dropdown for targeted help!",
-
-        'wifi': "📶 **WiFi Problems**\n\nCommon WiFi solutions:\n• Move closer to router\n• Restart router and device\n• Update network drivers\n• Change WiFi channel\n\nWhat specific WiFi issue are you experiencing?",
-
-        'slow': "🐢 **Performance Issues**\n\nFor slow performance, try:\n• Restart your device\n• Close unused programs\n• Clear cache and temp files\n• Check for updates\n\nIs it internet speed or computer performance that's slow?",
-
-        'printer': "🖨️ **Printer Help**\n\nPrinter troubleshooting:\n• Check power and connections\n• Verify ink/paper levels\n• Reinstall drivers\n• Clear print queue\n\nWhat's happening with your printer exactly?",
-
-        'password': "🔐 **Password Assistance**\n\nFor password issues:\n• Use 'Forgot Password' on login page\n• Check your email for reset link\n• Ensure caps lock is off\n• Try different browser\n\nAre you unable to reset your password or having login problems?",
-
-        'login': "🔑 **Login Problems**\n\nLogin issue solutions:\n• Verify username/password\n• Check caps lock\n• Clear browser cache\n• Try incognito mode\n\nWhat happens when you try to login?",
-
-        'email': "📧 **Email Issues**\n\nEmail troubleshooting:\n• Check internet connection\n• Verify email credentials\n• Clear email app cache\n• Check spam folder\n\nAre you having trouble sending, receiving, or accessing email?",
-    }
-
-    for keyword, response in partial_responses.items():
-        if keyword in message_lower:
-            return response
-
-    # Default responses for greetings
+    message_lower = message.lower().strip()
+    
+    # First, check for greetings and basic responses
     if any(word in message_lower for word in ['hello', 'hi', 'hey', 'greetings']):
-        return "Hello! 👋 I'm FixIT Assistant! I can help you with:\n\n• 🌐 Network & Internet issues\n• 💻 Computer performance problems\n• 🖨️ Printer and peripheral issues\n• 📱 Software and application errors\n• 🔐 Login and account access\n• 📧 Email and communication problems\n\nWhat can I help you with today? You can also use the 'Common Issues' dropdown for quick solutions!"
+        response = {
+            'type': 'greeting',
+            'message': "Hello! 👋 I'm FixIT Assistant! I can help you with various technical issues. What can I assist you with today?",
+            'buttons': get_quick_action_buttons(),
+            'related_faqs': []  # Make sure this is included
+        }
+        print(f"🔧 DEBUG: Generated greeting response with {len(response.get('buttons', []))} buttons")
+        print(f"🔧 DEBUG: Button data: {response.get('buttons')}")
+        return response
+    
+    
+    # Search FAQ database for matches
+    faq_matches = search_faq_database(message_lower)
+    
+    if faq_matches:
+        # Get the best match
+        best_match = faq_matches[0]
+        
+        return {
+            'type': 'faq_answer',
+            'message': best_match.answer,
+            'faq_id': best_match.id,
+            'category': best_match.category.name,
+            'related_faqs': get_related_faqs(best_match),
+            'buttons': get_related_buttons(best_match.category)
+        }
+    
+    # Check for specific keywords in messages
+    keyword_responses = get_keyword_response(message_lower)
+    if keyword_responses:
+        return keyword_responses
+    
+    # Default response
+    return {
+        'type': 'default',
+        'message': "🤔 **I'm here to help!**\n\nI understand you're asking about: *'" + message + "'*\n\nCould you provide more specific details about your issue? You can also use the quick buttons below for common problems.",
+        'buttons': get_quick_action_buttons()
+    }
 
-    elif any(word in message_lower for word in ['thank', 'thanks']):
-        return "You're welcome! 😊 I'm glad I could help. Is there anything else you need assistance with today?"
 
-    elif any(word in message_lower for word in ['bye', 'goodbye', 'see you']):
-        return "Goodbye! 👋 Don't hesitate to reach out if you need more help. Have a great day!"
+def search_faq_database(query):
+    """
+    Search FAQ database for relevant answers
+    """
+    from .models import FAQItem
+    
+    # First, try exact keyword matching
+    faq_items = FAQItem.objects.filter(is_active=True)
+    
+    # Split query into words
+    query_words = query.lower().split()
+    
+    scored_items = []
+    
+    for faq in faq_items:
+        score = 0
+        
+        # Check if query words are in question
+        question_lower = faq.question.lower()
+        for word in query_words:
+            if len(word) > 3 and word in question_lower:
+                score += 3
+        
+        # Check if query words are in keywords
+        if faq.keywords:
+            keywords = [k.strip().lower() for k in faq.keywords.split(',')]
+            for word in query_words:
+                if word in keywords:
+                    score += 5
+        
+        # Check short question
+        if faq.short_question and query in faq.short_question.lower():
+            score += 8
+        
+        # Check answer
+        if query in faq.answer.lower():
+            score += 2
+        
+        # Add bot priority
+        score += faq.bot_priority
+        
+        if score > 0:
+            scored_items.append((faq, score))
+    
+    # Sort by score (highest first)
+    scored_items.sort(key=lambda x: x[1], reverse=True)
+    
+    return [item[0] for item in scored_items[:3]]  # Return top 3 matches
 
-    # Default response for unrecognized messages
-    return "🤔 **I'm here to help!**\n\nI understand you're asking about: *'" + message + "'*\n\nI specialize in:\n• Network and connectivity issues\n• Computer performance problems\n• Software and hardware troubleshooting\n• Account and access problems\n\nCould you provide more specific details about your issue, or use the 'Common Issues' dropdown menu for common problems?"
+
+def get_quick_action_buttons():
+    """
+    Get comprehensive quick action buttons for bot chat
+    """
+    from .models import FAQItem, FAQCategory
+    
+    buttons = []
+    
+    # Get categories in order
+    categories = FAQCategory.objects.all().order_by('order')[:3]  # Top 3 categories
+    
+    for category in categories:
+        # Get 2 top FAQs from each category
+        category_faqs = FAQItem.objects.filter(
+            category=category,
+            is_active=True,
+            show_in_bot_buttons=True
+        ).order_by('bot_priority', 'order')[:2]
+        
+        for faq in category_faqs:
+            buttons.append({
+                'text': faq.short_question,
+                'faq_id': faq.id,
+                'category': category.name,
+                'icon': category.icon,
+                'action': f'faq_{faq.id}'
+            })
+    
+    # Add general action buttons
+    buttons.extend([
+        {'text': '🏠 Main Menu', 'action': 'menu', 'icon': 'home'},
+        {'text': '📝 Create Ticket', 'action': 'create_ticket', 'icon': 'ticket-alt'},
+        {'text': '👨‍💻 Contact Tech', 'action': 'contact_technician', 'icon': 'user-cog'},
+        {'text': '📋 All FAQs', 'action': 'view_faqs', 'icon': 'book'},
+    ])
+    
+    return buttons
+
+def get_related_faqs(faq_item):
+    """
+    Get related FAQ items with proper formatting
+    """
+    from .models import FAQItem
+    
+    related = FAQItem.objects.filter(
+        category=faq_item.category,
+        is_active=True
+    ).exclude(id=faq_item.id).order_by('order')[:5]
+    
+    # Format for template
+    return [{
+        'id': faq.id,
+        'short_question': faq.short_question,
+        'question': faq.question,
+    } for faq in related]
+
+def get_related_buttons(category):
+    """
+    Get buttons related to a specific category
+    """
+    from .models import FAQItem
+    
+    faqs = FAQItem.objects.filter(
+        category=category,
+        is_active=True,
+        show_in_bot_buttons=True
+    ).order_by('order')[:5]
+    
+    buttons = []
+    for faq in faqs:
+        buttons.append({
+            'text': faq.short_question,
+            'faq_id': faq.id
+        })
+    
+    return buttons
+
+
+def get_keyword_response(query):
+    """
+    Handle specific keyword patterns
+    """
+    responses = {
+        'thank': {
+            'type': 'thanks',
+            'message': "You're welcome! 😊 I'm glad I could help. Is there anything else you need assistance with today?",
+            'buttons': get_quick_action_buttons()
+        },
+        'bye': {
+            'type': 'goodbye',
+            'message': "Goodbye! 👋 Don't hesitate to reach out if you need more help. Have a great day!",
+            'buttons': []
+        },
+        'menu': {
+            'type': 'menu',
+            'message': "🏠 **Main Menu**\n\nHow can I help you today?",
+            'buttons': get_quick_action_buttons()
+        },
+        'create_ticket': {
+            'type': 'create_ticket',
+            'message': "📝 **Create Support Ticket**\n\nI can help you create a support ticket! Would you like me to guide you through the process?",
+            'buttons': [
+                {'text': 'Yes, create a ticket', 'action': 'start_ticket_creation'},
+                {'text': 'No, go back', 'action': 'menu'}
+            ]
+        },
+        'contact_technician': {
+            'type': 'contact_technician',
+            'message': "👨‍💻 **Contact Technician**\n\nI can help you find and contact available technicians. Would you like to browse the technician directory?",
+            'buttons': [
+                {'text': 'Browse Technicians', 'action': 'technician_directory'},
+                {'text': 'No, go back', 'action': 'menu'}
+            ]
+        },
+        'view_faqs': {
+            'type': 'view_faqs',
+            'message': "📋 **FAQ Categories**\n\nHere are our main help categories. Click any category to see related FAQs:",
+            'buttons': get_category_buttons()
+        }
+    }
+    
+    for keyword, response in responses.items():
+        if keyword in query:
+            return response
+    
+    return None
+
+
+def get_category_buttons():
+    """
+    Get FAQ category buttons
+    """
+    from .models import FAQCategory
+    
+    categories = FAQCategory.objects.all().order_by('order')
+    
+    buttons = []
+    for category in categories:
+        buttons.append({
+            'text': category.name,
+            'icon': category.icon,
+            'action': f'category_{category.slug}'
+        })
+    
+    return buttons
 
 
 from django.shortcuts import render, redirect
@@ -3287,3 +3262,275 @@ def accept_request_view(request, request_id):
         messages.error(request, "This request has already been handled or is invalid.")
 
     return redirect('technician_dashboard')
+
+
+@login_required
+def debug_upload_flow(request):
+    """Debug the complete upload flow"""
+    from django.core.files.storage import default_storage
+    from django.core.files.base import ContentFile
+    from django.http import JsonResponse
+    import os
+
+    debug_info = {
+        'storage_backend': str(default_storage.__class__),
+        'storage_module': default_storage.__class__.__module__,
+    }
+
+    # Test 1: Check storage backend attributes
+    try:
+        debug_info['bucket_name'] = getattr(default_storage, 'bucket_name', 'Not found')
+        debug_info['endpoint_url'] = getattr(default_storage, 'endpoint_url', 'Not found')
+        debug_info['access_key'] = getattr(default_storage, 'access_key', 'Not found')
+        debug_info['secret_key_set'] = bool(getattr(default_storage, 'secret_key', None))
+    except Exception as e:
+        debug_info['attribute_error'] = str(e)
+
+    # Test 2: Perform actual file operation and see where it goes
+    try:
+        test_filename = f"debug_upload_test_{request.user.id}.txt"
+        test_content = b"This is a test upload to see where files go"
+
+        print(f"🧪 DEBUG: Attempting to save {test_filename}")
+
+        # Save file
+        saved_path = default_storage.save(test_filename, ContentFile(test_content))
+        debug_info['saved_path'] = saved_path
+        print(f"✅ DEBUG: File saved as: {saved_path}")
+
+        # Check if it's a local filesystem path
+        if hasattr(default_storage, 'location'):
+            storage_location = default_storage.location
+            debug_info['storage_location'] = storage_location
+
+            # Check if file exists locally
+            local_path = os.path.join(storage_location, saved_path) if storage_location else saved_path
+            debug_info['local_path'] = local_path
+            debug_info['local_exists'] = os.path.exists(local_path)
+            print(f"🔍 DEBUG: Local path: {local_path}, Exists: {debug_info['local_exists']}")
+
+        # Check if file exists in storage
+        debug_info['storage_exists'] = default_storage.exists(saved_path)
+        print(f"🔍 DEBUG: Storage exists: {debug_info['storage_exists']}")
+
+        # Try to get URL
+        try:
+            url = default_storage.url(saved_path)
+            debug_info['generated_url'] = url
+            print(f"🌐 DEBUG: Generated URL: {url}")
+        except Exception as e:
+            debug_info['url_error'] = str(e)
+            print(f"❌ DEBUG: URL error: {e}")
+
+        # Clean up
+        try:
+            default_storage.delete(saved_path)
+            debug_info['cleanup_success'] = True
+        except Exception as e:
+            debug_info['cleanup_error'] = str(e)
+
+    except Exception as e:
+        debug_info['upload_test_error'] = str(e)
+        print(f"❌ DEBUG: Upload test failed: {e}")
+
+    return JsonResponse(debug_info)
+
+@login_required
+def check_current_storage(request):
+    """Check which storage backend is actually being used"""
+    from django.conf import settings
+    from django.core.files.storage import default_storage
+    from django.http import JsonResponse
+
+    config = {
+        'DEFAULT_FILE_STORAGE': getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set'),
+        'actual_storage_class': str(default_storage.__class__),
+        'STORAGES_default': getattr(settings, 'STORAGES', {}).get('default', {}).get('BACKEND', 'Not set'),
+    }
+
+    # Check if we're using local storage instead of S3
+    if 'FileSystemStorage' in str(default_storage.__class__):
+        config['storage_type'] = 'LOCAL_FILESYSTEM'
+        if hasattr(default_storage, 'location'):
+            config['local_media_root'] = default_storage.location
+    else:
+        config['storage_type'] = 'REMOTE_STORAGE'
+
+    return JsonResponse(config)
+
+
+@login_required
+def debug_fix_chats(request):
+    """
+    Debug endpoint to manually create missing chat sessions
+    """
+    if not request.user.profile.is_technician:
+        return JsonResponse({'error': 'Not a technician'})
+    
+    user = request.user
+    print(f"🔧 DEBUG FIX: Starting chat fix for technician {user.username}")
+    
+    # Get all assigned tickets
+    assigned_tickets = CreateTicket.objects.filter(
+        assistance_requests__technician__user_profile__user=user
+    ).distinct()
+    
+    print(f"🔧 DEBUG FIX: Found {assigned_tickets.count()} assigned tickets")
+    
+    created_count = 0
+    ticket_details = []
+    
+    for ticket in assigned_tickets:
+        print(f"🔧 DEBUG FIX: Processing ticket {ticket.id}: {ticket.title}")
+        
+        # Check if chat session already exists
+        existing_chat = ChatSession.objects.filter(
+            technician=user,
+            ticket=ticket
+        ).first()
+        
+        if existing_chat:
+            print(f"🔧 DEBUG FIX: Chat already exists for ticket {ticket.id} - Chat ID: {existing_chat.id}")
+            ticket_details.append({
+                'ticket_id': ticket.id,
+                'ticket_title': ticket.title,
+                'chat_exists': True,
+                'chat_id': existing_chat.id
+            })
+        else:
+            # Create new chat session
+            try:
+                chat_session = ChatSession.objects.create(
+                    user=ticket.user,
+                    technician=user,
+                    ticket=ticket,
+                    chat_type='user_tech',
+                    status='active',
+                    last_message_at=timezone.now()
+                )
+                
+                # Create initial message
+                initial_content = f"Support ticket created: {ticket.title}\n\nDescription: {ticket.description}\nCategory: {ticket.category}\nPriority: {ticket.priority}"
+                
+                Message.objects.create(
+                    chat_session=chat_session,
+                    sender=ticket.user,
+                    receiver=user,
+                    content=initial_content,
+                    message_type='user_to_tech',
+                    created_at=timezone.now()
+                )
+                
+                created_count += 1
+                print(f"🔧 DEBUG FIX: Created chat session {chat_session.id} for ticket {ticket.id}")
+                
+                ticket_details.append({
+                    'ticket_id': ticket.id,
+                    'ticket_title': ticket.title,
+                    'chat_exists': False,
+                    'chat_created': True,
+                    'chat_id': chat_session.id
+                })
+                
+            except Exception as e:
+                print(f"❌ DEBUG FIX: Error creating chat for ticket {ticket.id}: {e}")
+                ticket_details.append({
+                    'ticket_id': ticket.id,
+                    'ticket_title': ticket.title,
+                    'error': str(e)
+                })
+    
+    print(f"🔧 DEBUG FIX: Created {created_count} new chat sessions")
+    
+    return JsonResponse({
+        'success': True,
+        'created_count': created_count,
+        'total_tickets': assigned_tickets.count(),
+        'ticket_details': ticket_details,
+        'message': f'Created {created_count} missing chat sessions out of {assigned_tickets.count()} assigned tickets'
+    })
+@login_required
+def debug_technician_data(request):
+    """
+    Comprehensive debug view for technician data
+    """
+    user = request.user
+    
+    data = {
+        'technician': {
+            'username': user.username,
+            'is_technician': user.profile.is_technician,
+        },
+        'assistance_requests': [],
+        'tickets': [],
+        'chat_sessions': []
+    }
+    
+    # Get assistance requests
+    assistance_requests = AssistanceRequest.objects.filter(
+        technician__user_profile__user=user
+    ).select_related('ticket', 'user')
+    
+    for ar in assistance_requests:
+        data['assistance_requests'].append({
+            'id': ar.id,
+            'title': ar.title,
+            'status': ar.status,
+            'ticket_id': ar.ticket.id if ar.ticket else None,
+            'ticket_title': ar.ticket.title if ar.ticket else None,
+            'user': ar.user.username,
+        })
+    
+    # Get tickets
+    tickets = CreateTicket.objects.filter(
+        assistance_requests__technician__user_profile__user=user
+    ).distinct()
+    
+    for ticket in tickets:
+        data['tickets'].append({
+            'id': ticket.id,
+            'title': ticket.title,
+            'status': ticket.status,
+            'user': ticket.user.username,
+        })
+    
+    # Get chat sessions
+    chat_sessions = ChatSession.objects.filter(technician=user)
+    
+    for chat in chat_sessions:
+        data['chat_sessions'].append({
+            'id': chat.id,
+            'user': chat.user.username,
+            'ticket_id': chat.ticket.id if chat.ticket else None,
+            'ticket_title': chat.ticket.title if chat.ticket else None,
+            'chat_type': chat.chat_type,
+            'status': chat.status,
+        })
+    
+    return JsonResponse(data)
+
+@csrf_exempt
+@login_required
+def debug_request_assistance(request):
+    """Debug endpoint to see what's being received"""
+    print("=== DEBUG REQUEST ASSISTANCE ===")
+    print(f"Method: {request.method}")
+    print(f"Content-Type: {request.content_type}")
+    print(f"Body: {request.body}")
+    print(f"User: {request.user}")
+    print(f"POST data: {request.POST}")
+
+    if request.body:
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            print(f"JSON data: {data}")
+        except Exception as e:
+            print(f"JSON decode error: {e}")
+
+    return JsonResponse({
+        'success': True,
+        'debug': 'Check server logs',
+        'method': request.method,
+        'content_type': request.content_type,
+        'user': request.user.username
+    })

@@ -102,8 +102,7 @@
                         {% endfor %}
                     </div>
                 </div>
-
-                <!-- Messages Area -->
+<!-- Messages Area -->
 <div class="lg:col-span-3 bg-white/20 backdrop-blur-lg rounded-2xl border border-white/20 p-6 flex flex-col">
     {% if selected_chat %}
     <!-- Messages Header -->
@@ -127,65 +126,8 @@
                     </p>
                 </div>
             </div>
-            <div class="flex space-x-2">
-                <!-- Common Issues Dropdown -->
-                {% if selected_chat.is_bot %}
-                <div class="relative group">
-                    <button class="bg-white/20 text-[#0245a3] p-2 rounded-lg hover:bg-white/30 transition flex items-center space-x-1">
-                        <i class="fas fa-question-circle"></i>
-                        <span>Common Issues</span>
-                        <i class="fas fa-chevron-down text-xs ml-1"></i>
-                    </button>
-                    <div class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden group-hover:block z-10">
-                        <div class="p-2">
-                            <div class="text-xs font-semibold text-gray-500 px-2 py-1">NETWORK ISSUES</div>
-                            <button onclick="sendQuickQuestion('Internet not showing in network options')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-wifi text-blue-500 w-4"></i>
-                                <span>No Internet Connection</span>
-                            </button>
-                            <button onclick="sendQuickQuestion('WiFi keeps disconnecting')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-signal text-blue-500 w-4"></i>
-                                <span>WiFi Connection Drops</span>
-                            </button>
-                            <button onclick="sendQuickQuestion('Slow internet speed')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-tachometer-alt text-blue-500 w-4"></i>
-                                <span>Slow Internet Speed</span>
-                            </button>
-                            
-                            <div class="border-t my-1"></div>
-                            <div class="text-xs font-semibold text-gray-500 px-2 py-1">DEVICE PROBLEMS</div>
-                            <button onclick="sendQuickQuestion('Computer running very slow')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-desktop text-green-500 w-4"></i>
-                                <span>Computer Running Slow</span>
-                            </button>
-                            <button onclick="sendQuickQuestion('Printer not working')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-print text-green-500 w-4"></i>
-                                <span>Printer Not Working</span>
-                            </button>
-                            <button onclick="sendQuickQuestion('Software installation failed')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-download text-green-500 w-4"></i>
-                                <span>Software Installation</span>
-                            </button>
-                            
-                            <div class="border-t my-1"></div>
-                            <div class="text-xs font-semibold text-gray-500 px-2 py-1">ACCOUNT & ACCESS</div>
-                            <button onclick="sendQuickQuestion('Cannot login to my account')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-key text-red-500 w-4"></i>
-                                <span>Login Problems</span>
-                            </button>
-                            <button onclick="sendQuickQuestion('Password reset not working')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-lock text-red-500 w-4"></i>
-                                <span>Password Reset Issues</span>
-                            </button>
-                            <button onclick="sendQuickQuestion('Email not receiving messages')" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded flex items-center space-x-2">
-                                <i class="fas fa-envelope text-red-500 w-4"></i>
-                                <span>Email Problems</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-                
+            
+            <div class="flex items-center space-x-2">
                 {% if not selected_chat.is_bot %}
                 <button class="bg-white/20 text-[#0245a3] p-2 rounded-lg hover:bg-white/30 transition">
                     <i class="fas fa-phone"></i>
@@ -202,78 +144,159 @@
     </div>
     
     <!-- Messages List -->
-<div class="flex-1 overflow-y-auto space-y-4 mb-4 max-h-[400px] p-4 bg-white/10 rounded-lg" id="messagesContainer">
-    {% for message in chat_messages %}
-    <div class="{% if message.sender == user %}text-right{% endif %}">
-        
-        <!-- REPLACE THIS ENTIRE MESSAGE DIV WITH: -->
-        {% if message.message_type == 'bot_to_user' %}
-        <!-- Bot Message Styling -->
-        <div class="bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24] text-white rounded-2xl p-4 inline-block max-w-[70%] shadow-sm">
-            <div class="flex items-start space-x-3">
-                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
-                    <i class="fas fa-robot text-xs"></i>
-                </div>
-                <div class="flex-1">
-                    <p class="text-white whitespace-pre-wrap">{{ message.content }}</p>
-                    <div class="text-xs text-white/70 mt-2">
-                        {{ message.timestamp|date:"g:i A" }}
+    <div class="flex-1 overflow-y-auto space-y-4 mb-4 max-h-[400px] p-4 bg-white/10 rounded-lg" id="messagesContainer">
+        {% for message in chat_messages %}
+        <div class="{% if message.sender == user %}text-right{% endif %}">
+            
+            {% if message.message_type == 'bot_to_user' %}
+            <div class="bot-message bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24] text-white rounded-2xl p-4 inline-block max-w-[70%] shadow-sm" 
+                data-message-id="{{ message.id }}" 
+                data-response-type="{{ message.response_type }}">
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                        <i class="fas fa-robot text-xs"></i>
+                    </div>
+                    <div class="flex-1">
+                        <!-- Bot Message Content -->
+                        <div class="bot-message-content">
+                            <p class="text-white whitespace-pre-wrap">{{ message.content }}</p>
+                        </div>
+                        
+                        <!-- BOT QUICK HELP BUTTONS - MOVED HERE -->
+                        <div class="bot-quick-help mt-3">
+                            {% if message.response_type == 'greeting' or message.response_type == 'default' or message.response_type == 'menu' %}
+                            <!-- Show quick help buttons for greeting/default responses -->
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                {% for category in faq_categories %}
+                                <button class="quick-help-category-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white/20 text-white hover:bg-white/30 border border-white/30 transition-colors"
+                                        onclick="sendQuickQuestion('{{ category.name }} help')">
+                                    <i class="fas fa-{{ category.icon|default:'question-circle' }} mr-1"></i>
+                                    {{ category.name }}
+                                </button>
+                                {% empty %}
+                                <!-- Fallback static buttons if no FAQ data -->
+                                <button class="quick-help-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white/20 text-white hover:bg-white/30 border border-white/30 transition-colors"
+                                        onclick="sendQuickQuestion('Network issues')">
+                                    <i class="fas fa-wifi mr-1"></i>
+                                    Network
+                                </button>
+                                <button class="quick-help-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white/20 text-white hover:bg-white/30 border border-white/30 transition-colors"
+                                        onclick="sendQuickQuestion('Software problems')">
+                                    <i class="fas fa-desktop mr-1"></i>
+                                    Software
+                                </button>
+                                <button class="quick-help-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white/20 text-white hover:bg-white/30 border border-white/30 transition-colors"
+                                        onclick="sendQuickQuestion('Hardware issues')">
+                                    <i class="fas fa-cogs mr-1"></i>
+                                    Hardware
+                                </button>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Common Actions -->
+                            <div class="flex flex-wrap gap-2">
+                                <button class="action-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-green-500/20 text-green-100 hover:bg-green-500/30 border border-green-500/30 transition-colors"
+                                        onclick="window.location.href='{% url 'my_tickets' %}'">
+                                    <i class="fas fa-ticket-alt mr-1"></i>
+                                    Create Ticket
+                                </button>
+                                <button class="action-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500/20 text-purple-100 hover:bg-purple-500/30 border border-purple-500/30 transition-colors"
+                                        onclick="window.location.href='{% url 'technician_directory' %}'">
+                                    <i class="fas fa-user-cog mr-1"></i>
+                                    Find Technician
+                                </button>
+                                <button class="action-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500/20 text-blue-100 hover:bg-blue-500/30 border border-blue-500/30 transition-colors"
+                                        onclick="window.location.href='{% url 'help_center' %}'">
+                                    <i class="fas fa-book mr-1"></i>
+                                    View All FAQs
+                                </button>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Existing Bot Buttons (from bot_response_data) -->
+                            {% if message.bot_response_data and message.bot_response_data.buttons %}
+                            <div class="bot-quick-buttons mt-3">
+                                <div class="flex flex-wrap gap-2">
+                                    {% for button in message.bot_response_data.buttons %}
+                                    <button class="bot-quick-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors 
+                                                {% if button.faq_id %}bg-white/30 text-white hover:bg-white/40 border border-white/30
+                                                {% elif button.action == 'create_ticket' %}bg-green-500/20 text-green-100 hover:bg-green-500/30 border border-green-500/30
+                                                {% elif button.action == 'contact_technician' %}bg-purple-500/20 text-purple-100 hover:bg-purple-500/30 border border-purple-500/30
+                                                {% elif button.action == 'view_faqs' %}bg-blue-500/20 text-blue-100 hover:bg-blue-500/30 border border-blue-500/30
+                                                {% else %}bg-white/20 text-white hover:bg-white/30 border border-white/20{% endif %}"
+                                            data-action="{% if button.faq_id %}faq_{{ button.faq_id }}{% else %}{{ button.action }}{% endif %}"
+                                            data-faq-id="{{ button.faq_id|default:'' }}"
+                                            onclick="handleBotButtonClick(this)">
+                                        {% if button.icon %}<i class="fas fa-{{ button.icon }} mr-1"></i>{% endif %}
+                                        {{ button.text }}
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- RELATED FAQS -->
+                            {% if message.bot_response_data and message.bot_response_data.related_faqs %}
+                            <div class="bot-related-faqs mt-4 pt-3 border-t border-white/20">
+                                <h4 class="text-xs font-semibold text-white/80 mb-2">Related Questions:</h4>
+                                <div class="space-y-1">
+                                    {% for related in message.bot_response_data.related_faqs %}
+                                    {% if related.id and related.short_question %}
+                                    <button class="bot-related-btn text-left w-full px-2 py-1.5 text-xs text-white/90 hover:bg-white/10 rounded flex items-center"
+                                            data-action="faq_{{ related.id }}"
+                                            onclick="handleBotButtonClick(this)">
+                                        <i class="fas fa-chevron-right text-xs mr-2 opacity-70"></i>
+                                        <span>{{ related.short_question|truncatechars:40 }}</span>
+                                    </button>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-xs text-white/70 mt-2">
+                            <i class="fas fa-robot mr-1"></i>FixIT Assistant • {{ message.timestamp|date:"g:i A" }}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        {% elif message.message_type == 'user_to_bot' %}
-        <!-- User to Bot Message Styling -->
-        <div class="bg-[#8fbaf3] text-white rounded-2xl p-4 inline-block max-w-[70%] shadow-sm">
-            <div class="flex items-start space-x-3">
-                <div class="flex-1">
-                    <p class="text-white whitespace-pre-wrap">{{ message.content }}</p>
-                    <div class="text-xs text-white/70 mt-2">
-                        {{ message.timestamp|date:"g:i A" }}
+            
+            {% else %}
+            <!-- Regular Message Styling (User to Tech or Tech to User) -->
+            <div class="{% if message.sender == user %}bg-[#8fbaf3] text-white{% else %}bg-white/30 text-[#0245a3]{% endif %} rounded-2xl p-4 inline-block max-w-[70%] shadow-sm">
+                <div class="flex items-start space-x-3">
+                    {% if message.sender != user %}
+                    <div class="w-8 h-8 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                        {{ selected_chat.contact_name|first|upper }}
                     </div>
-                </div>
-                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-[#0245a3] font-semibold text-xs flex-shrink-0">
-                    {{ user.username|first|upper }}
+                    {% endif %}
+                    <div class="flex-1">
+                        <p class="{% if message.sender == user %}text-white{% else %}text-[#0245a3]{% endif %} whitespace-pre-wrap">
+                            {{ message.content }}
+                        </p>
+                        <div class="text-xs {% if message.sender == user %}text-white/70{% else %}text-[#0245a3]/70{% endif %} mt-2">
+                            {{ message.timestamp|date:"g:i A" }}
+                        </div>
+                    </div>
+                    {% if message.sender == user %}
+                    <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-[#0245a3] font-semibold text-xs flex-shrink-0">
+                        {{ user.username|first|upper }}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
+            
         </div>
-        
-        {% else %}
-        <!-- Regular Message Styling (User to Tech or Tech to User) -->
-        <div class="{% if message.sender == user %}bg-[#8fbaf3] text-white{% else %}bg-white/30 text-[#0245a3]{% endif %} rounded-2xl p-4 inline-block max-w-[70%] shadow-sm">
-            <div class="flex items-start space-x-3">
-                {% if message.sender != user %}
-                <div class="w-8 h-8 bg-gradient-to-r from-[#8fbaf3] to-[#0245a3] rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
-                    {{ selected_chat.contact_name|first|upper }}
-                </div>
-                {% endif %}
-                <div class="flex-1">
-                    <p class="{% if message.sender == user %}text-white{% else %}text-[#0245a3]{% endif %} whitespace-pre-wrap">
-                        {{ message.content }}
-                    </p>
-                    <div class="text-xs {% if message.sender == user %}text-white/70{% else %}text-[#0245a3]/70{% endif %} mt-2">
-                        {{ message.timestamp|date:"g:i A" }}
-                    </div>
-                </div>
-                {% if message.sender == user %}
-                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-[#0245a3] font-semibold text-xs flex-shrink-0">
-                    {{ user.username|first|upper }}
-                </div>
-                {% endif %}
-            </div>
+        {% empty %}
+        <div class="text-center py-12 text-[#0245a3] opacity-70">
+            <i class="fas fa-comments text-4xl mb-3"></i>
+            <p>No messages yet</p>
+            <p class="text-sm mt-2">Start a conversation</p>
         </div>
-        {% endif %}
-        
+        {% endfor %}
     </div>
-    {% empty %}
-    <div class="text-center py-12 text-[#0245a3] opacity-70">
-        <i class="fas fa-comments text-4xl mb-3"></i>
-        <p>No messages yet</p>
-        <p class="text-sm mt-2">Start a conversation</p>
-    </div>
-    {% endfor %}
-</div>
     
     <!-- Message Input -->
     <div class="border-t border-white/20 pt-4">
@@ -290,6 +313,7 @@
             </button>
         </form>
     </div>
+    
     {% else %}
     <!-- No Chat Selected -->
     <div class="text-center py-12 flex-1 flex items-center justify-center">
@@ -309,6 +333,8 @@
     </div>
     {% endif %}
 </div>
+    
+  
             </div>
         </div>
     </div>
@@ -385,6 +411,23 @@
 
 <style>
     .animation-delay-2000 { animation-delay: 2s; }
+    .quick-help-category-btn, .quick-help-btn, .action-btn {
+    transition: all 0.2s ease;
+    }
+
+    .quick-help-category-btn:hover, .quick-help-btn:hover, .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .bot-quick-help {
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 
 <script>
@@ -649,5 +692,127 @@ function startBotChatFromTicket(ticketId) {
         alert('Error starting bot chat');
     });
 }
+
+function handleBotButtonClick(buttonElement) {
+    const action = buttonElement.dataset.action;
+    const faqId = buttonElement.dataset.faqId;
+    
+    console.log('Bot button clicked:', { action, faqId });
+    
+    if (action.startsWith('faq_')) {
+        // Load FAQ answer
+        loadFAQAnswer(faqId || action.replace('faq_', ''));
+    } else if (action === 'create_ticket') {
+        // Redirect to create ticket
+        window.location.href = "{% url 'create_ticket' %}";
+    } else if (action === 'contact_technician' || action === 'technician_directory') {
+        // Redirect to technician directory
+        window.location.href = "{% url 'technician_directory' %}";
+    } else if (action === 'view_faqs') {
+        // Redirect to FAQ page
+        window.location.href = "{% url 'help_center' %}";
+    } else if (action === 'menu' || action === 'back_to_menu') {
+        // Send menu command to bot
+        sendQuickQuestion('menu');
+    } else if (action.startsWith('category_')) {
+        // Handle category buttons
+        const category = action.replace('category_', '');
+        sendQuickQuestion(`show ${category} faqs`);
+    } else if (action === 'start_ticket_creation') {
+        // Start guided ticket creation
+        window.location.href = "{% url 'create_ticket' %}";
+    } else {
+        // Default: send the button text as a message
+        const buttonText = buttonElement.textContent.trim();
+        sendQuickQuestion(buttonText);
+    }
+}
+
+function loadFAQAnswer(faqId) {
+    // AJAX call to get FAQ answer - Use the correct API URL
+    fetch(`/help/api/faq/${faqId}/`)  // ✅ Matches path('help/api/faq/<int:faq_id>/', views.get_faq_detail, name='get_faq_detail')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Send the FAQ question to the bot
+                if (data.faq && data.faq.question) {
+                    sendQuickQuestion(data.faq.question);
+                } else {
+                    // Fallback to short question
+                    sendQuickQuestion(data.faq.short_question || `FAQ #${faqId}`);
+                }
+            } else {
+                console.error('Error loading FAQ:', data.error);
+                // Fallback: Send a generic message
+                sendQuickQuestion(`Can you explain FAQ ${faqId}?`);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading FAQ:', error);
+            // Fallback: Send a generic message
+            sendQuickQuestion(`Tell me about FAQ ${faqId}`);
+        });
+}
+
+// Update sendQuickQuestion to handle special actions
+function sendQuickQuestion(question) {
+    console.log('Sending quick question:', question);
+    
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        messageInput.value = question;
+        
+        const messageForm = document.getElementById('messageForm');
+        if (messageForm) {
+            messageForm.dispatchEvent(new Event('submit'));
+        }
+    }
+}
+
+// Auto-add quick help buttons to new bot messages
+function setupBotMessageInteractions() {
+    // Add event listeners for bot buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.bot-quick-btn') || e.target.closest('.bot-related-btn')) {
+            e.preventDefault();
+            handleBotButtonClick(e.target.closest('button'));
+        }
+    });
+    
+    // Auto-scroll to new bot messages with buttons
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (messagesContainer) {
+        const botMessages = messagesContainer.querySelectorAll('.bot-message');
+        if (botMessages.length > 0) {
+            const lastBotMessage = botMessages[botMessages.length - 1];
+            lastBotMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+}
+
+// Call this on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setupBotMessageInteractions();
+});
+
+// Add event listeners on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers for all bot buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.bot-quick-btn') || e.target.closest('.bot-related-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleBotButtonClick(e.target.closest('button'));
+        }
+    });
+    
+    // Also handle quick help dropdown buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('[onclick^="sendQuickQuestion"]')) {
+            return;
+        }
+    });
+});
+
 </script>
 {% endblock %}

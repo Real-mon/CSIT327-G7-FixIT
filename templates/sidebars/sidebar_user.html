@@ -29,12 +29,6 @@
             <i class="fas fa-user-cog w-5"></i>
             <span>Technicians</span>
         </a>
-        <a href="{% url 'available-technicians' %}"
-           class="flex items-center space-x-3 px-4 py-3 rounded-xl transition 
-                  {% if current == 'available-technicians' %}bg-white/20 text-[#0245a3] font-semibold{% else %}text-[#0245a3] hover:bg-white/40{% endif %}">
-            <i class="fas fa-user-friends w-5"></i>
-            <span>Available Technicians</span>
-        </a>
         <a href="{% url 'user_message' %}"
            class="flex items-center space-x-3 px-4 py-3 rounded-xl transition 
                   {% if current == 'user_message' %}bg-white/20 text-[#0245a3] font-semibold{% else %}text-[#0245a3] hover:bg-white/40{% endif %}">
