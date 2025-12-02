@@ -232,8 +232,6 @@ INSTALLED_APPS = [
     'accounts',
     'storages', # Your other custom app
 
-    # 2. THIRD-PARTY UTILITY APPS (Place here if they don't have conflicting templates)
-    'widget_tweaks',
 
     # 3. DJANGO SYSTEM APPS (Place these last to prevent their default templates from overriding yours)
     'django.contrib.admin',
