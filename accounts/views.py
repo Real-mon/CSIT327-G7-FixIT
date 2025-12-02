@@ -2124,6 +2124,23 @@ def user_dashboard_view(request):
     return render(request, 'dashboard/user_dashboard.html', context)
 
 
+# accounts/views.py
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator  # CORE SECURITY
+from django.conf import settings
+
+User = get_user_model()
+
+
+# NOTE: The @login_required decorator MUST be removed from this view,
+# as users must be logged OUT to reset their password.
+
 def password_reset_view(request):
     if request.method == "POST":
         email = request.POST.get("email")
