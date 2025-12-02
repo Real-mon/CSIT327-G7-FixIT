@@ -27,6 +27,13 @@ from .models import User, UserProfile, Message, Contact, CreateTicket, ChatSessi
 from django.db.models.signals import post_save
 from django.utils import timezone
 from accounts.models import FAQCategory, FAQItem
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator  # CORE SECURITY
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 
 def role_select_view(request):
@@ -2297,7 +2304,6 @@ def change_password_view(request):
 
     # GET request - show the form
     return render(request, 'accounts/change_password.html')
-
 #test
 def redirect_to_correct_dashboard(user):
     """
