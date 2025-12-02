@@ -11,7 +11,6 @@ urlpatterns = [
     path('role-select/', views.role_select_view, name='role_select'),
     path('profile/user/', views.user_profile_view, name='user_profile'),
     path('profile/technician/', views.technician_profile_view, name='technician_profile'),
-    path('password_reset/', views.password_reset_view, name='password_reset'),
     path('change-password/', views.change_password_view, name='change_password'),  # ADD THIS
     path('technician-dashboard/', views.technician_dashboard_view, name='technician_dashboard'),
     path('user-dashboard/', views.user_dashboard_view, name='user_dashboard'),
@@ -70,7 +69,20 @@ path('available-technicians/', views.available_technicians, name='available-tech
     path('technician/ticket/<int:ticket_id>/', views.technician_ticket_details_view, name='technician_ticket_details'),
 
     #DELETE TICKET
-path('ticket/<int:ticket_id>/delete/', views.delete_ticket, name='delete_ticket'),
+    path('ticket/<int:ticket_id>/delete/', views.delete_ticket, name='delete_ticket'),
+
+    path('password_reset/', views.password_reset_view, name='password_reset'), # The form submission view
+    # 2. Notification: User redirected here after submission
+    path('password_reset/done/', views.password_reset_done_view, name='password_reset_done'),
+
+    # 3. Confirmation (CRITICAL): Validates the unique token sent via email
+    # It must capture the base64-encoded user ID (uidb64) and the security token (token)
+    path('reset/<uidb64>/<token>/', views.password_reset_confirm_view, name='password_reset_confirm'),
+
+    # 4. Completion: Final success message
+    path('reset/done/', views.password_reset_complete_view, name='password_reset_complete'),
+
+    path('change-password/', views.change_password_view, name='change_password'),  # ADD THIS
 
 
 ]

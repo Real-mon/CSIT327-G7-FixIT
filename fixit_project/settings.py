@@ -323,7 +323,25 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
  
+# EMAIL CONFIGURATION (SMTP - GMAIL)
+# =====================
 
+# 1. Read the EMAIL_BACKEND from the environment (e.g., set to 'django.core.mail.backends.smtp.EmailBackend' on Render)
+#    It defaults to the console backend for local testing if the variable isn't set.
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+
+if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
+    # 2. Static Gmail Server Details (These are constants)
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+
+    # 3. Credentials (Read from environment variables for security)
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER') # Your Gmail address
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') # Your 16-character App Password
+
+# 4. Default Sender Address (Also read from environment for flexibility)
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'FixIT Support <no-reply@fixit.com>')
  
 # =====================
 # SUPABASE KEYS
