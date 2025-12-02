@@ -227,16 +227,20 @@ if RENDER_EXTERNAL_HOSTNAME:
 # APPLICATIONS
 # =====================
 INSTALLED_APPS = [
+
+    # 1. YOUR CUSTOM APP (Must be at the top to ensure its templates load first)
+    'accounts',
+    'storages', # Your other custom app
+
+
+    # 3. DJANGO SYSTEM APPS (Place these last to prevent their default templates from overriding yours)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Your apps
-    'storages',
-    'accounts',
+
 ]
  
 # =====================
@@ -262,7 +266,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
+        'APP_DIRS': True, #DEAFAULT WAS TRUE
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -340,8 +344,38 @@ if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
     EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER') # Your Gmail address
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') # Your 16-character App Password
 
+# EMAIL CONFIGURATION (SMTP - GMAIL)
+# =====================
+
+# 1. Read the EMAIL_BACKEND from the environment (e.g., set to 'django.core.mail.backends.smtp.EmailBackend' on Render)
+#    It defaults to the console backend for local testing if the variable isn't set.
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+
+if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
+    # 2. Static Gmail Server Details (These are constants)
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+
+    # 3. Credentials (Read from environment variables for security)
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER') # Your Gmail address
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') # Your 16-character App Password
+
 # 4. Default Sender Address (Also read from environment for flexibility)
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'FixIT Support <no-reply@fixit.com>')
+
+# Optional: Set the domain name used in the password reset link
+# If you don't set this, Django uses the domain from the current request (best for production).
+# If you need a fallback, uncomment and use your Render/custom domain.
+# DOMAIN_NAME = os.getenv('RENDER_EXTERNAL_HOSTNAME', 'localhost:8000')
+
+
+
+
+
+
+
+
  
 # =====================
 # SUPABASE KEYS
