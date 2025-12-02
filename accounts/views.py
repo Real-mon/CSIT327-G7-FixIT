@@ -2171,7 +2171,7 @@ def password_reset_view(request):
         }
 
         # Ensure you have created templates/registration/password_reset_email.html
-        html_message = render_to_string('registration/password_reset_email.html', email_context)
+        html_message = render_to_string('accounts/password_reset_email.html', email_context)
 
         # 6. Send Email using SMTP Configuration
         send_mail(
