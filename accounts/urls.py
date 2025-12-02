@@ -42,8 +42,11 @@ urlpatterns = [
     path('technician/debug/fix-chats/', views.debug_fix_chats, name='debug_fix_chats'),
     # path('technician/debug/data/', views.debug_technician_data, name='debug_technician_data'),
     #FAQ/Help Center
-    path('faq/', views.faq_view, name='faq'),
-
+    path('help-center/', views.help_center_view, name='help_center'),
+    path('faq/', views.help_center_view, name='faq'),
+    path('help/api/faq/<int:faq_id>/', views.get_faq_detail, name='get_faq_detail'),
+    path('help/api/category/<slug:category_slug>/', views.get_category_faqs, name='get_category_faqs'),
+    
     #History
     path('profile/history/', views.ticket_history, name='ticket_history'),
     path('technician/debug/data/', views.debug_technician_data, name='debug_technician_data'),

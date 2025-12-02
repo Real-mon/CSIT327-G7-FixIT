@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import UserProfile
+from django.contrib import admin
+from .models import FAQCategory, FAQItem
 
 
 class UserProfileInline(admin.StackedInline):
@@ -37,3 +39,39 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'user__email', 'phone_number', 'city')
     list_filter = ('city', 'country', 'created_at')
     ordering = ('-created_at',)
+    
+@admin.register(FAQCategory)
+class FAQCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'order', 'faq_count', 'icon']
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ['order', 'icon']
+    
+    def faq_count(self, obj):
+        return obj.faqs.count()
+    faq_count.short_description = 'FAQ Items'
+
+
+@admin.register(FAQItem)
+class FAQItemAdmin(admin.ModelAdmin):
+    list_display = ['short_question', 'category', 'order', 'is_active', 'bot_priority', 
+                    'show_in_dashboard', 'show_in_bot_buttons', 'read_time']
+    list_filter = ['category', 'is_active', 'show_in_dashboard', 'show_in_bot_buttons']
+    search_fields = ['question', 'short_question', 'answer', 'keywords']
+    list_editable = ['order', 'is_active', 'bot_priority', 'show_in_dashboard', 
+                     'show_in_bot_buttons', 'read_time']
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('category', 'question', 'short_question', 'answer', 'short_answer')
+        }),
+        ('Bot Settings', {
+            'fields': ('keywords', 'bot_priority', 'show_in_bot_buttons')
+        }),
+        ('Display Settings', {
+            'fields': ('order', 'is_active', 'show_in_dashboard', 'read_time')
+        }),
+    )
+    
+    class Media:
+        css = {
+            'all': ('admin/css/faq_admin.css',)
+        }
