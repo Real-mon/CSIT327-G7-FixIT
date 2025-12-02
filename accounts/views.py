@@ -2115,23 +2115,164 @@ def user_dashboard_view(request):
     }
     
     return render(request, 'dashboard/user_dashboard.html', context)
-#@login_required
+
+
+# accounts/views.py
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator  # CORE SECURITY
+from django.conf import settings
+
+User = get_user_model()
+
+
+# NOTE: The @login_required decorator MUST be removed from this view,
+# as users must be logged OUT to reset their password.
+
 def password_reset_view(request):
     if request.method == "POST":
         email = request.POST.get("email")
-        try:
-            user = User.objects.get(email=email)
-            return redirect('change_password')  # Your Change password UI
-        except User.DoesNotExist:
-            return render(request, "accounts/password_reset.html", {"message": "❌ No account found with that email."})
 
+        try:
+            # 1. Look up user (Fail silently if not found for security)
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # 2. SECURITY BEST PRACTICE: Always show the "done" page regardless
+            # of whether the user exists to prevent account enumeration.
+            return redirect('password_reset_done')
+
+        # --- Begin Secure Email Sending Logic ---
+
+        # 3. Generate Secure Token and UID
+        # UID is the user ID encoded, Token is the time-limited security key
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        # 4. Construct the Live Reset Link (Uses your custom URL names)
+        domain = request.get_host()
+        protocol = 'http'  # Change this to 'https' in your production environment!
+
+        # This URL relies on your urls.py having the name 'password_reset_confirm'
+        reset_url = f"{protocol}://{domain}/accounts/reset/{uid}/{token}/"
+
+        # 5. Render Email Content (Using templates/registration/password_reset_email.html)
+        email_context = {
+            'user': user,
+            'reset_url': reset_url,
+            'protocol': protocol,
+            'domain': domain,
+            'uid': uid,
+            'token': token,
+        }
+
+        # Ensure you have created templates/registration/password_reset_email.html
+        html_message = render_to_string('registration/password_reset_email.html', email_context)
+
+        # 6. Send Email using SMTP Configuration
+        send_mail(
+            subject="Password Reset for FixIT",
+            # Use the plain message as a fallback, and the HTML message for styling
+            message=f"Please use this link to reset your password: {reset_url}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+            html_message=html_message
+        )
+
+        # 7. Redirect to the Done page (Notification that the email was sent)
+        return redirect('password_reset_done')
+
+    # Render the initial form on GET request
     context = {
         'title': 'Password Reset - FixIT',
         'hide_navigation': True
     }
+    # NOTE: I am using the template name you provided in your earlier views (accounts/password_reset.html)
     return render(request, 'accounts/password_reset.html', context)
 
 
+# accounts/views.py (Add these three functions)
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import get_user_model
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.forms import SetPasswordForm  # Use built-in form for security
+
+User = get_user_model()
+
+
+def password_reset_done_view(request):
+    """
+    Renders the confirmation page after the email is sent (Notification).
+    """
+    context = {
+        'title': 'Check Your Email - FixIT',
+        'hide_navigation': True
+    }
+    # Renders your custom styled 'password_reset_done.html'
+    return render(request, 'accounts/password_reset_done.html', context)
+
+
+def password_reset_confirm_view(request, uidb64, token):
+    """
+    Validates the UID and token, then allows the user to set a new password.
+    This view receives the security token from the email link.
+    """
+    # 1. Decode UID and Fetch User
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    # 2. Check if the Token is Valid
+    if user is not None and default_token_generator.check_token(user, token):
+        validlink = True
+    else:
+        validlink = False
+
+    if request.method == 'POST' and validlink:
+        form = SetPasswordForm(user, request.POST)
+        if form.is_valid():
+            # 3. Save New Password (Django handles hashing securely)
+            form.save()
+
+            # 4. Success! Redirect to the complete page
+            return redirect('password_reset_complete')
+
+    elif validlink:
+        # Display the form on GET request
+        form = SetPasswordForm(user)
+    else:
+        # Display the failed link message
+        form = None
+
+    context = {
+        'title': 'Set New Password - FixIT',
+        'form': form,
+        'validlink': validlink,
+        'hide_navigation': True
+    }
+    # Renders your custom styled 'password_reset_confirm.html'
+    return render(request, 'accounts/password_reset_confirm.html', context)
+
+
+def password_reset_complete_view(request):
+    """
+    Renders the final success page after the password has been changed.
+    """
+    context = {
+        'title': 'Password Changed! - FixIT',
+        'hide_navigation': True
+    }
+    # Renders your custom styled 'password_reset_complete.html'
+    return render(request, 'accounts/password_reset_complete.html', context)
 
 #@login_required
 def change_password_view(request):
